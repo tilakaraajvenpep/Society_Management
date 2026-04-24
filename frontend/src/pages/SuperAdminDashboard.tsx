@@ -47,7 +47,7 @@ const SuperAdminDashboard = () => {
 
   const fetchTenants = async () => {
     try {
-      const response = await axios.get('http://localhost:5001/api/tenants', {
+      const response = await axios.get('/tenants', {
         headers: { Authorization: `Bearer ${token}` }
       });
       console.log('Tenants data:', response.data);
@@ -59,7 +59,7 @@ const SuperAdminDashboard = () => {
 
   const fetchStats = async () => {
     try {
-      const response = await axios.get('http://localhost:5001/api/platform/platform-stats', {
+      const response = await axios.get('/platform/platform-stats', {
         headers: { Authorization: `Bearer ${token}` }
       });
       setStats(response.data);
@@ -72,11 +72,11 @@ const SuperAdminDashboard = () => {
     e.preventDefault();
     try {
       if (editingTenantId) {
-        await axios.patch(`http://localhost:5001/api/tenants/${editingTenantId}`, newTenant, {
+        await axios.patch(`/tenants/${editingTenantId}`, newTenant, {
           headers: { Authorization: `Bearer ${token}` }
         });
       } else {
-        await axios.post('http://localhost:5001/api/tenants', newTenant, {
+        await axios.post('/tenants', newTenant, {
           headers: { Authorization: `Bearer ${token}` }
         });
       }
@@ -93,7 +93,7 @@ const SuperAdminDashboard = () => {
 
   const handleToggleStatus = async (id: string) => {
     try {
-      await axios.patch(`http://localhost:5001/api/tenants/${id}/toggle-status`, {}, {
+      await axios.patch(`/tenants/${id}/toggle-status`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
       fetchTenants();
@@ -107,7 +107,7 @@ const SuperAdminDashboard = () => {
   const handleDeleteTenant = async (id: string) => {
     if (!window.confirm('Are you sure you want to delete this society? This action is irreversible.')) return;
     try {
-      await axios.delete(`http://localhost:5001/api/tenants/${id}`, {
+      await axios.delete(`/tenants/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       fetchTenants();

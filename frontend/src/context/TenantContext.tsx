@@ -41,7 +41,7 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
       if (slug) {
         try {
-          const response = await axios.get(`http://localhost:5001/api/tenants/public/${slug}`);
+          const response = await axios.get(`/tenants/public/${slug}`);
           setTenant(response.data);
         } catch (err) {
           console.error('Tenant not found or inactive');

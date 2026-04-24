@@ -18,7 +18,7 @@ const MemberHelpdesk = ({ token }: { token: string | null }) => {
   const fetchTickets = async () => {
     setLoading(true);
     try {
-      const res = await axios.get('http://localhost:5001/api/tickets', {
+      const res = await axios.get('/tickets', {
         headers: { Authorization: `Bearer ${token}` }
       });
       setTickets(res.data);
@@ -34,7 +34,7 @@ const MemberHelpdesk = ({ token }: { token: string | null }) => {
   const handleCreateTicket = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await axios.post('http://localhost:5001/api/tickets', newTicket, {
+      await axios.post('/tickets', newTicket, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setNewTicket({ subject: '', description: '', priority: 'MEDIUM' });
@@ -49,7 +49,7 @@ const MemberHelpdesk = ({ token }: { token: string | null }) => {
     e.preventDefault();
     if (!comment.trim()) return;
     try {
-      const res = await axios.post(`http://localhost:5001/api/tickets/${selectedTicket.id}/comments`, { content: comment }, {
+      const res = await axios.post(`/tickets/${selectedTicket.id}/comments`, { content: comment }, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setSelectedTicket({
@@ -64,7 +64,7 @@ const MemberHelpdesk = ({ token }: { token: string | null }) => {
 
   const selectTicket = async (id: string) => {
     try {
-      const res = await axios.get(`http://localhost:5001/api/tickets/${id}`, {
+      const res = await axios.get(`/tickets/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setSelectedTicket(res.data);
@@ -403,7 +403,7 @@ const MemberPortal = () => {
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const res = await axios.get('http://localhost:5001/api/members/profile', {
+        const res = await axios.get('/members/profile', {
           headers: { Authorization: `Bearer ${token}` }
         });
         setMemberInfo(res.data);

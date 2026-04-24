@@ -33,7 +33,7 @@ const StaffManagement = ({ token, currentUserId, designations }: { token: string
 
   const fetchStaff = async () => {
     try {
-      const res = await axios.get('http://localhost:5001/api/staff', { headers: { Authorization: `Bearer ${token}` } });
+      const res = await axios.get('/staff', { headers: { Authorization: `Bearer ${token}` } });
       setStaff(res.data);
     } catch { }
   };
@@ -44,9 +44,9 @@ const StaffManagement = ({ token, currentUserId, designations }: { token: string
     setError(''); setLoading(true);
     try {
       if (editingStaff) {
-        await axios.patch(`http://localhost:5001/api/staff/${editingStaff.id}`, form, { headers: { Authorization: `Bearer ${token}` } });
+        await axios.patch(`/staff/${editingStaff.id}`, form, { headers: { Authorization: `Bearer ${token}` } });
       } else {
-        await axios.post('http://localhost:5001/api/staff', form, { headers: { Authorization: `Bearer ${token}` } });
+        await axios.post('/staff', form, { headers: { Authorization: `Bearer ${token}` } });
       }
       setShowForm(false); setEditingStaff(null);
       setForm({ name: '', email: '', mobile: '', designation: designations[0] || 'Treasurer', password: '' });
@@ -59,7 +59,7 @@ const StaffManagement = ({ token, currentUserId, designations }: { token: string
   const handleDelete = async (id: string, name: string) => {
     if (!confirm(`Remove ${name} from office bearers?`)) return;
     try {
-      await axios.delete(`http://localhost:5001/api/staff/${id}`, { headers: { Authorization: `Bearer ${token}` } });
+      await axios.delete(`/staff/${id}`, { headers: { Authorization: `Bearer ${token}` } });
       fetchStaff();
     } catch (err: any) {
       alert(err.response?.data?.message || 'Error removing staff');
@@ -186,9 +186,9 @@ const VendorManagement = ({ token, vendors, onRefresh, serviceTypes }: { token: 
     try {
       const headers = { Authorization: `Bearer ${token}` };
       if (editingVendor) {
-        await axios.patch(`http://localhost:5001/api/vendors/${editingVendor.id}`, vendorForm, { headers });
+        await axios.patch(`/vendors/${editingVendor.id}`, vendorForm, { headers });
       } else {
-        await axios.post('http://localhost:5001/api/vendors', vendorForm, { headers });
+        await axios.post('/vendors', vendorForm, { headers });
       }
       setShowVendorModal(false); setEditingVendor(null); resetForm(); onRefresh();
     } catch (err: any) { setVendorError(err.response?.data?.message || 'Error saving vendor'); }
@@ -197,7 +197,7 @@ const VendorManagement = ({ token, vendors, onRefresh, serviceTypes }: { token: 
   const handleDelete = async (id: string, name: string) => {
     if (!confirm(`Delete vendor "${name}"? This may affect linked expenses.`)) return;
     try {
-      await axios.delete(`http://localhost:5001/api/vendors/${id}`, { headers: { Authorization: `Bearer ${token}` } });
+      await axios.delete(`/vendors/${id}`, { headers: { Authorization: `Bearer ${token}` } });
       onRefresh();
     } catch (err: any) { alert(err.response?.data?.message || 'Error deleting vendor'); }
   };
@@ -328,9 +328,9 @@ const ExpenseManagement = ({
     try {
       const headers = { Authorization: `Bearer ${token}` };
       if (editingExpense) {
-        await axios.patch(`http://localhost:5001/api/expenses/${editingExpense.id}`, form, { headers });
+        await axios.patch(`/expenses/${editingExpense.id}`, form, { headers });
       } else {
-        await axios.post('http://localhost:5001/api/expenses', form, { headers });
+        await axios.post('/expenses', form, { headers });
       }
       closeModal(); onRefresh();
     } catch (err: any) { setError(err.response?.data?.message || 'Error saving expense'); }
@@ -348,7 +348,7 @@ const ExpenseManagement = ({
   const handleDelete = async (id: string) => {
     if (!confirm('Delete this expense?')) return;
     try {
-      await axios.delete(`http://localhost:5001/api/expenses/${id}`, { headers: { Authorization: `Bearer ${token}` } });
+      await axios.delete(`/expenses/${id}`, { headers: { Authorization: `Bearer ${token}` } });
       onRefresh();
     } catch { alert('Error deleting expense'); }
   };
@@ -525,7 +525,7 @@ const MastersManagement = ({ token, onRefresh }: { token: string | null, onRefre
   const fetchItems = async (category: string) => {
     setLoadingItems(true); setError('');
     try {
-      const res = await axios.get(`http://localhost:5001/api/master-data/${category}`, { headers: { Authorization: `Bearer ${token}` } });
+      const res = await axios.get(`/master-data/${category}`, { headers: { Authorization: `Bearer ${token}` } });
       setItems(res.data);
     } catch { setError('Failed to load items'); }
     finally { setLoadingItems(false); }
@@ -537,7 +537,7 @@ const MastersManagement = ({ token, onRefresh }: { token: string | null, onRefre
     if (!newValue.trim()) return;
     setError('');
     try {
-      await axios.post(`http://localhost:5001/api/master-data/${activeCategory}`, { value: newValue.trim() }, { headers: { Authorization: `Bearer ${token}` } });
+      await axios.post(`/master-data/${activeCategory}`, { value: newValue.trim() }, { headers: { Authorization: `Bearer ${token}` } });
       setNewValue(''); fetchItems(activeCategory); onRefresh();
     } catch (err: any) { setError(err.response?.data?.message || 'Error adding item'); }
   };
@@ -546,7 +546,7 @@ const MastersManagement = ({ token, onRefresh }: { token: string | null, onRefre
     if (!editingValue.trim()) return;
     setError('');
     try {
-      await axios.patch(`http://localhost:5001/api/master-data/${id}`, { value: editingValue.trim() }, { headers: { Authorization: `Bearer ${token}` } });
+      await axios.patch(`/master-data/${id}`, { value: editingValue.trim() }, { headers: { Authorization: `Bearer ${token}` } });
       setEditingId(null); fetchItems(activeCategory); onRefresh();
     } catch (err: any) { setError(err.response?.data?.message || 'Error updating item'); }
   };
@@ -554,7 +554,7 @@ const MastersManagement = ({ token, onRefresh }: { token: string | null, onRefre
   const handleDelete = async (id: string, value: string) => {
     if (!confirm(`Remove "${value}" from the list?`)) return;
     try {
-      await axios.delete(`http://localhost:5001/api/master-data/${id}`, { headers: { Authorization: `Bearer ${token}` } });
+      await axios.delete(`/master-data/${id}`, { headers: { Authorization: `Bearer ${token}` } });
       fetchItems(activeCategory); onRefresh();
     } catch (err: any) { setError(err.response?.data?.message || 'Error deleting item'); }
   };
@@ -643,7 +643,7 @@ const Helpdesk = ({ token }: { token: string | null }) => {
   const fetchTickets = async () => {
     setLoading(true);
     try {
-      const res = await axios.get(`http://localhost:5001/api/tickets${filter !== 'ALL' ? `?status=${filter}` : ''}`, {
+      const res = await axios.get(`/tickets${filter !== 'ALL' ? `?status=${filter}` : ''}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setTickets(res.data);
@@ -658,11 +658,11 @@ const Helpdesk = ({ token }: { token: string | null }) => {
 
   const handleStatusChange = async (ticketId: string, status: string) => {
     try {
-      await axios.patch(`http://localhost:5001/api/tickets/${ticketId}/status`, { status }, {
+      await axios.patch(`/tickets/${ticketId}/status`, { status }, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (selectedTicket?.id === ticketId) {
-        const res = await axios.get(`http://localhost:5001/api/tickets/${ticketId}`, {
+        const res = await axios.get(`/tickets/${ticketId}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         setSelectedTicket(res.data);
@@ -676,7 +676,7 @@ const Helpdesk = ({ token }: { token: string | null }) => {
   const handleDeleteTicket = async (ticketId: string) => {
     if (!confirm("Are you sure you want to permanently delete this ticket and all its discussions?")) return;
     try {
-      await axios.delete(`http://localhost:5001/api/tickets/${ticketId}`, {
+      await axios.delete(`/tickets/${ticketId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setSelectedTicket(null);
@@ -690,7 +690,7 @@ const Helpdesk = ({ token }: { token: string | null }) => {
     e.preventDefault();
     if (!comment.trim()) return;
     try {
-      const res = await axios.post(`http://localhost:5001/api/tickets/${selectedTicket.id}/comments`, { content: comment }, {
+      const res = await axios.post(`/tickets/${selectedTicket.id}/comments`, { content: comment }, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setSelectedTicket({
@@ -705,7 +705,7 @@ const Helpdesk = ({ token }: { token: string | null }) => {
 
   const selectTicket = async (id: string) => {
     try {
-      const res = await axios.get(`http://localhost:5001/api/tickets/${id}`, {
+      const res = await axios.get(`/tickets/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setSelectedTicket(res.data);
@@ -938,7 +938,7 @@ const TenantAdminDashboard = () => {
 
   const fetchFinancials = async () => {
     try {
-      let url = 'http://localhost:5001/api/reports/financials?';
+      let url = '/reports/financials?';
       if (reportFilters.startDate && reportFilters.endDate) {
         url += `startDate=${reportFilters.startDate}&endDate=${reportFilters.endDate}`;
       } else if (reportFilters.month && reportFilters.year) {
@@ -963,19 +963,19 @@ const TenantAdminDashboard = () => {
     try {
       const headers = { Authorization: `Bearer ${token}` };
       const [membersRes, paymentsRes, cashRes, pendingRes, summaryRes, vendorsRes, logsRes, expensesRes, stRes, desRes, ecRes, upcomingRes, finRes] = await Promise.all([
-        axios.get('http://localhost:5001/api/members', { headers }),
-        axios.get('http://localhost:5001/api/payments/history', { headers }),
-        axios.get('http://localhost:5001/api/cash/in-hand', { headers }),
-        axios.get('http://localhost:5001/api/cash/pending', { headers }),
-        axios.get('http://localhost:5001/api/reports/summary', { headers }),
-        axios.get('http://localhost:5001/api/vendors', { headers }),
-        axios.get('http://localhost:5001/api/tenants/logs', { headers }),
-        axios.get('http://localhost:5001/api/expenses', { headers }),
-        axios.get('http://localhost:5001/api/master-data/SERVICE_TYPE', { headers }),
-        axios.get('http://localhost:5001/api/master-data/DESIGNATION', { headers }),
-        axios.get('http://localhost:5001/api/master-data/EXPENSE_CATEGORY', { headers }),
-        axios.get('http://localhost:5001/api/payments/upcoming', { headers }),
-        axios.get('http://localhost:5001/api/reports/financials', { headers }),
+        axios.get('/members', { headers }),
+        axios.get('/payments/history', { headers }),
+        axios.get('/cash/in-hand', { headers }),
+        axios.get('/cash/pending', { headers }),
+        axios.get('/reports/summary', { headers }),
+        axios.get('/vendors', { headers }),
+        axios.get('/tenants/logs', { headers }),
+        axios.get('/expenses', { headers }),
+        axios.get('/master-data/SERVICE_TYPE', { headers }),
+        axios.get('/master-data/DESIGNATION', { headers }),
+        axios.get('/master-data/EXPENSE_CATEGORY', { headers }),
+        axios.get('/payments/upcoming', { headers }),
+        axios.get('/reports/financials', { headers }),
       ]);
       setMembers(membersRes.data);
       setPayments(paymentsRes.data);
@@ -1000,7 +1000,7 @@ const TenantAdminDashboard = () => {
   const handleSubmitTransfer = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await axios.post('http://localhost:5001/api/cash/transfer', newTransfer, {
+      await axios.post('/cash/transfer', newTransfer, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setShowModal(null);
@@ -1021,7 +1021,7 @@ const TenantAdminDashboard = () => {
 
   const handleApproveTransfer = async (id: string) => {
     try {
-      await axios.post(`http://localhost:5001/api/cash/approve/${id}`, {}, {
+      await axios.post(`/cash/approve/${id}`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
       fetchData();
@@ -1034,7 +1034,7 @@ const TenantAdminDashboard = () => {
   const handleSubmitPayment = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await axios.post('http://localhost:5001/api/payments', newPayment, {
+      await axios.post('/payments', newPayment, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setShowModal(null);
@@ -1049,7 +1049,7 @@ const TenantAdminDashboard = () => {
   const handleSubmitMember = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await axios.post('http://localhost:5001/api/members', newMember, {
+      await axios.post('/members', newMember, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setShowModal(null);
@@ -1063,7 +1063,7 @@ const TenantAdminDashboard = () => {
   const handleUpdateMember = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await axios.patch(`http://localhost:5001/api/members/${editingMember.id}`, editingMember, {
+      await axios.patch(`/members/${editingMember.id}`, editingMember, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setShowModal(null);
@@ -1088,7 +1088,7 @@ const TenantAdminDashboard = () => {
   const handleVacantMember = async (id: string, name: string, flatNo: string) => {
     if (!window.confirm(`Are you sure you want to mark Flat ${flatNo} (${name}) as VACANT?\nThis will revoke their login access and pause future dues. You can add a new occupant to this flat later.`)) return;
     try {
-      await axios.patch(`http://localhost:5001/api/members/${id}/vacant`, {}, {
+      await axios.patch(`/members/${id}/vacant`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
       fetchData();
@@ -1105,7 +1105,7 @@ const TenantAdminDashboard = () => {
   const handleCancelPayment = async (id: string) => {
     if (!confirm('Are you sure you want to cancel this payment? This will revert the cash balance and member dues.')) return;
     try {
-      await axios.patch(`http://localhost:5001/api/payments/${id}`, { status: 'CANCELLED' }, {
+      await axios.patch(`/payments/${id}`, { status: 'CANCELLED' }, {
         headers: { Authorization: `Bearer ${token}` }
       });
       fetchData();
@@ -1135,7 +1135,7 @@ const TenantAdminDashboard = () => {
       });
 
       try {
-        await axios.post('http://localhost:5001/api/members/bulk', { members }, {
+        await axios.post('/members/bulk', { members }, {
           headers: { Authorization: `Bearer ${token}` }
         });
         fetchData();
@@ -1889,7 +1889,7 @@ const TenantAdminDashboard = () => {
                   const hAmt = (document.getElementById('halfYearlyAmount') as HTMLInputElement).value;
                   const aAmt = (document.getElementById('annualAmount') as HTMLInputElement).value;
                   
-                  await axios.patch('http://localhost:5001/api/tenants/settings', { 
+                  await axios.patch('/tenants/settings', { 
                     maintenanceAmount: parseFloat(amt) || 0,
                     quarterlyAmount: parseFloat(qAmt) || null,
                     halfYearlyAmount: parseFloat(hAmt) || null,
