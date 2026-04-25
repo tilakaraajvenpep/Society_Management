@@ -943,12 +943,12 @@ const TenantAdminDashboard = () => {
       const url = res.data[type === 'photo' ? 'photoUrl' : 'idProofUrl'];
       
       if (showModal === 'member') {
-        setNewMember(prev => ({ 
+        setNewMember((prev: any) => ({ 
           ...prev, 
           [type === 'photo' ? 'photoUrl' : 'idProofUrl']: url 
         }));
       } else if (editingMember) {
-        setEditingMember(prev => ({ 
+        setEditingMember((prev: any) => ({ 
           ...prev, 
           [type === 'photo' ? 'photoUrl' : 'idProofUrl']: url 
         }));
@@ -1108,7 +1108,13 @@ const TenantAdminDashboard = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       setShowModal(null);
-      setNewMember({ name: '', email: '', mobile: '', flatNo: '', address: '', outstandingDues: 0, password: '', enableLogin: false, defaultTenure: 'MONTHLY', paidUntil: '', initialPaymentAmount: 0, initialPaymentMode: 'CASH', initialPaymentNotes: '' });
+      setNewMember({ 
+        name: '', email: '', mobile: '', flatNo: '', address: '', 
+        outstandingDues: 0, password: '', enableLogin: false, 
+        defaultTenure: 'MONTHLY', paidUntil: '', 
+        initialPaymentAmount: 0, initialPaymentMode: 'CASH', initialPaymentNotes: '',
+        photoUrl: '', idProofUrl: '' 
+      });
       fetchData();
       alert('Member added successfully');
     } catch (err) {
@@ -1135,7 +1141,9 @@ const TenantAdminDashboard = () => {
       ...m, 
       password: '', 
       enableLogin: !!m.userId,
-      paidUntil: m.paidUntil ? new Date(m.paidUntil).toISOString().split('T')[0] : ''
+      paidUntil: m.paidUntil ? new Date(m.paidUntil).toISOString().split('T')[0] : '',
+      photoUrl: m.photoUrl || '',
+      idProofUrl: m.idProofUrl || ''
     });
     setShowModal('edit-member');
   };
