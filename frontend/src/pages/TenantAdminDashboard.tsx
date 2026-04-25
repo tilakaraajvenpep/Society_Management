@@ -2165,7 +2165,7 @@ const TenantAdminDashboard = () => {
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, padding: '1rem' }}>
           <div className="card" style={{ 
             width: '100%', 
-            maxWidth: '600px', 
+            maxWidth: (showModal === 'member' || showModal === 'edit-member' || showModal === 'member-history') ? '850px' : '600px', 
             maxHeight: '90vh',
             overflowY: 'auto',
             boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
