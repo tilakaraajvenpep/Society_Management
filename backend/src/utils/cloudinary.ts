@@ -13,7 +13,7 @@ cloudinary.config({
 
 const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
-  params: async (req, file) => {
+  params: async (req: any, file: any) => {
     return {
       folder: 'society_management',
       allowed_formats: ['jpg', 'png', 'jpeg', 'pdf'],
