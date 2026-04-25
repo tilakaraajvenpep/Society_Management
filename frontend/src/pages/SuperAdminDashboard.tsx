@@ -253,7 +253,7 @@ const SuperAdminDashboard = () => {
                       <td>
                         <code style={{ fontSize: '0.8125rem', backgroundColor: 'var(--bg-tertiary)', padding: '0.2rem 0.4rem', borderRadius: '0.25rem' }}>{t.slug}</code>
                         <div style={{ fontSize: '0.7rem', marginTop: '0.25rem' }}>
-                          <a href={`http://${t.slug}.localhost:5173`} target="_blank" rel="noreferrer" style={{ color: 'var(--primary)' }}>Visit Site</a>
+                          <a href={`/${t.slug}`} target="_blank" rel="noreferrer" style={{ color: 'var(--primary)' }}>Visit Site</a>
                         </div>
                       </td>
                       <td><span className="badge" style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-primary)' }}>{t.billingCycle}</span></td>
