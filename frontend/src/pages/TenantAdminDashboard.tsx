@@ -1167,8 +1167,8 @@ const TenantAdminDashboard = () => {
       });
       fetchData();
       alert('Member added successfully');
-    } catch (err) {
-      alert('Error adding member');
+    } catch (err: any) {
+      alert(err.response?.data?.message || err.response?.data?.error?.message || 'Error adding member');
     }
   };
   const handleUpdateMember = async (e: React.FormEvent) => {
@@ -1181,8 +1181,8 @@ const TenantAdminDashboard = () => {
       setEditingMember(null);
       fetchData();
       alert('Member updated successfully');
-    } catch (err) {
-      alert('Error updating member');
+    } catch (err: any) {
+      alert(err.response?.data?.message || err.response?.data?.error?.message || 'Error updating member');
     }
   };
 

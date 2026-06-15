@@ -20,9 +20,15 @@ router.post("/member-docs", authenticate, upload.fields([
     }
 
     res.json(result);
-  } catch (error) {
+  } catch (error: any) {
     console.error("Upload error:", error);
-    res.status(500).json({ message: "Error uploading files", error });
+    res.status(500).json({ 
+      message: error.message || "Error uploading files", 
+      error: {
+        message: error.message,
+        stack: error.stack
+      } 
+    });
   }
 });
 

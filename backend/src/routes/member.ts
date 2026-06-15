@@ -148,9 +148,17 @@ router.post("/", authorize(["TENANT_ADMIN"]), async (req: any, res) => {
     });
 
     res.json(result);
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error adding member:", error);
-    res.status(500).json({ message: "Error adding member", error });
+    res.status(500).json({ 
+      message: error.message || "Error adding member", 
+      error: {
+        message: error.message,
+        stack: error.stack,
+        code: error.code,
+        meta: error.meta
+      } 
+    });
   }
 });
 
