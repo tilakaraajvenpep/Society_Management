@@ -12,10 +12,17 @@ const prisma = new PrismaClient({ adapter });
 
 async function main() {
   try {
+    const updated = await prisma.tenant.updateMany({
+      data: {
+        enableForums: true
+      }
+    });
+    console.log(`Successfully enabled forums for ${updated.count} tenant(s).`);
+
     const tenants = await prisma.tenant.findMany();
-    console.log("Tenants:", tenants.map(t => ({ id: t.id, name: t.name, slug: t.slug, enableForums: t.enableForums })));
+    console.log("Current tenants status:", tenants.map(t => ({ id: t.id, name: t.name, slug: t.slug, enableForums: t.enableForums })));
   } catch (err) {
-    console.error("Error in check-data:", err);
+    console.error("Error in enable-forums script:", err);
   }
 }
 
