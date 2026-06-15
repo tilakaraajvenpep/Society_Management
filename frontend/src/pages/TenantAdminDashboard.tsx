@@ -1433,7 +1433,7 @@ const TenantAdminDashboard = () => {
               {/* 6-month trend */}
               <div className="card">
                 <h3 style={{ marginBottom: '1.5rem', fontSize: '1rem' }}>6-Month Income vs Expense Trend</h3>
-                <div style={{ height: '260px' }}>
+                <div style={{ position: 'relative', width: '100%', height: '260px' }}>
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={summary.monthlyTrends || []} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" vertical={false} />
@@ -1455,7 +1455,7 @@ const TenantAdminDashboard = () => {
                 {(summary.expenseByCategory || []).length === 0 ? (
                   <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '3rem 0', fontSize: '0.875rem' }}>No expenses recorded yet</div>
                 ) : (
-                  <div style={{ height: '220px' }}>
+                  <div style={{ position: 'relative', width: '100%', height: '220px' }}>
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
                         <Pie data={summary.expenseByCategory || []} dataKey="amount" nameKey="category" cx="50%" cy="50%" innerRadius={55} outerRadius={90} paddingAngle={3}>
