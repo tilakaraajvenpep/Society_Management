@@ -295,7 +295,7 @@ const MemberPayments = ({ memberInfo, user }: { memberInfo: any, user: any }) =>
               <tbody>
                 {memberInfo.payments.map((p: any) => (
                   <tr key={p.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
-                    <td style={{ padding: '1rem', fontSize: '0.875rem' }}>{new Date(p.paymentDate).toLocaleDateString()}</td>
+                    <td style={{ padding: '1rem', fontSize: '0.875rem' }}>{new Date(p.paymentDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
                     <td style={{ padding: '1rem', fontSize: '0.875rem', fontWeight: 600 }}>{p.receiptNumber || `RCP-${p.id.slice(-6).toUpperCase()}`}</td>
                     <td style={{ padding: '1rem', fontSize: '0.875rem' }}>{p.periodLabel || `${p.paidMonths} Month(s)`}</td>
                     <td style={{ padding: '1rem', fontSize: '0.875rem', fontWeight: 700 }}>₹{p.amount.toLocaleString()}</td>
@@ -411,7 +411,38 @@ const MemberPortal = () => {
 
   const renderContent = () => {
     switch (activeTab) {
-      case 'overview':
+      case 'overview': {
+        const getFinancialYearFromDate = (dateStr: string) => {
+          const d = new Date(dateStr);
+          const yr = d.getFullYear();
+          const m = d.getMonth();
+          return m >= 3 ? yr : yr - 1; // starts in April
+        };
+
+        const now = new Date();
+        const currentStartYear = now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1;
+        const currentFY = `${currentStartYear}-${((currentStartYear + 1) % 100).toString().padStart(2, '0')}`;
+        const nextFY = `${currentStartYear + 1}-${((currentStartYear + 2) % 100).toString().padStart(2, '0')}`;
+
+        const regStartYear = memberInfo?.createdAt ? getFinancialYearFromDate(memberInfo.createdAt) : currentStartYear;
+
+        const currentYearCost = memberInfo?.tenant?.maintenanceCosts?.find((c: any) => c.financialYear === currentFY)?.amount;
+
+        // Construct yearsList for history table showing only assigned/configured costs from their registration year
+        const yearsList: { id: string; financialYear: string; amount: number; isCustom: boolean }[] = 
+          (memberInfo?.tenant?.maintenanceCosts || [])
+            .filter((c: any) => {
+              const fyStartYear = parseInt(c.financialYear.split('-')[0]);
+              return fyStartYear >= regStartYear;
+            })
+            .map((c: any) => ({
+              id: c.id,
+              financialYear: c.financialYear,
+              amount: c.amount,
+              isCustom: true
+            }))
+            .sort((a: any, b: any) => a.financialYear.localeCompare(b.financialYear));
+
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
             <div className="card" style={{ borderLeft: '4px solid var(--primary)', backgroundColor: 'var(--bg-secondary)' }}>
@@ -459,6 +490,71 @@ const MemberPortal = () => {
             </div>
 
             <div className="card">
+              <h3 style={{ marginBottom: '1rem', fontSize: '1.125rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Building size={20} style={{ color: 'var(--primary)' }} /> Maintenance Cost Details
+              </h3>
+              <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
+                Your maintenance fee structure by financial year (showing since your registration year).
+              </p>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem', marginBottom: '1.5rem' }}>
+                <div style={{ backgroundColor: 'var(--bg-secondary)', padding: '1rem', borderRadius: '0.75rem', border: '1px solid var(--border-color)' }}>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.25rem' }}>
+                    Current Year ({currentFY})
+                  </div>
+                  <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                    ₹{currentYearCost !== undefined 
+                      ? currentYearCost.toLocaleString() 
+                      : ((memberInfo?.tenant?.maintenanceAmount || 0) * 12).toLocaleString()
+                    }/yr
+                  </div>
+                </div>
+              </div>
+
+              <h4 style={{ fontSize: '0.9rem', marginBottom: '0.75rem', color: 'var(--text-primary)' }}>Your Yearly Maintenance History</h4>
+              <div className="table-container" style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '2px solid var(--border-color)', textAlign: 'left' }}>
+                      <th style={{ padding: '0.5rem 0.75rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Financial Year</th>
+                      <th style={{ padding: '0.5rem 0.75rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Annual Fee</th>
+                      <th style={{ padding: '0.5rem 0.75rem', fontSize: '0.8rem', color: 'var(--text-secondary)', textAlign: 'right' }}>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {yearsList.length === 0 ? (
+                      <tr>
+                        <td colSpan={3} style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '2rem' }}>
+                          No maintenance costs configured per financial year yet.
+                        </td>
+                      </tr>
+                    ) : (
+                      yearsList.map((c) => {
+                        const isCurrent = c.financialYear === currentFY;
+                        const isNext = c.financialYear === nextFY;
+                        return (
+                          <tr key={c.id} style={{ borderBottom: '1px solid var(--border-color)', backgroundColor: isCurrent ? 'var(--bg-tertiary)' : 'transparent' }}>
+                            <td style={{ padding: '0.75rem', fontSize: '0.875rem' }}>
+                              <strong>{c.financialYear}</strong>
+                            </td>
+                            <td style={{ padding: '0.75rem', fontSize: '0.875rem', fontWeight: 600 }}>
+                              ₹{c.amount.toLocaleString()}/year
+                            </td>
+                            <td style={{ padding: '0.75rem', fontSize: '0.825rem', textAlign: 'right' }}>
+                              {isCurrent && <span className="badge badge-success">Current Year</span>}
+                              {isNext && <span className="badge" style={{ backgroundColor: 'var(--primary)', color: 'white' }}>Next Year</span>}
+                              {!isCurrent && !isNext && <span className="badge" style={{ backgroundColor: 'var(--border-color)', color: 'var(--text-secondary)' }}>Historical</span>}
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="card">
               <h3 style={{ marginBottom: '1.25rem', fontSize: '1.125rem' }}>Quick Actions</h3>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
                 <button className="btn btn-secondary" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', padding: '1.5rem', alignItems: 'center' }} onClick={() => setActiveTab('helpdesk')}>
@@ -477,6 +573,7 @@ const MemberPortal = () => {
             </div>
           </div>
         );
+      }
       case 'helpdesk':
         return <MemberHelpdesk token={token} />;
       case 'payments':

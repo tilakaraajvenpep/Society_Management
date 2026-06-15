@@ -1,0 +1,28 @@
+services:
+  - type: web
+    name: societypro-backend
+    env: node
+    plan: free
+    rootDir: backend
+    buildCommand: npm install && npm run build && npx prisma generate
+    startCommand: npx prisma db push && npm start
+    envVars:
+      - key: PORT
+        value: 5001
+      - key: DATABASE_URL
+        fromDatabase:
+          name: societypro-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      # Optional: Set Cloudinary variables if using image uploads
+      # - key: CLOUDINARY_CLOUD_NAME
+      #   value: your_cloudinary_cloud_name
+      # - key: CLOUDINARY_API_KEY
+      #   value: your_cloudinary_api_key
+      # - key: CLOUDINARY_API_SECRET
+      #   value: your_cloudinary_api_secret
+
+databases:
+  - name: societypro-db
+    plan: free

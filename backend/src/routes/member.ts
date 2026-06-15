@@ -13,7 +13,13 @@ router.get("/profile", authorize(["MEMBER"]), async (req: any, res) => {
     const member = await prisma.member.findUnique({
       where: { userId: req.user.id },
       include: { 
-        tenant: true,
+        tenant: {
+          include: {
+            maintenanceCosts: {
+              orderBy: { financialYear: 'asc' }
+            }
+          }
+        },
         payments: {
           orderBy: { paymentDate: 'desc' },
           take: 50 // Limit to last 50 receipts
@@ -43,52 +49,52 @@ router.get("/", authorize(["TENANT_ADMIN"]), async (req: any, res) => {
 });
 
 router.post("/", authorize(["TENANT_ADMIN"]), async (req: any, res) => {
-  const { name, email, mobile, flatNo, address, outstandingDues, password, enableLogin, defaultTenure, paidUntil, initialPaymentAmount, initialPaymentMode, initialPaymentNotes, photoUrl, idProofUrl } = req.body;
+  const { name, email, mobile, flatNo, address, outstandingDues, password, enableLogin, defaultTenure, paidUntil, initialPaymentAmount, initialPaymentMode, initialPaymentNotes, photoUrl, idProofUrl, createdAt } = req.body;
   try {
     const result = await prisma.$transaction(async (tx) => {
       let userId = undefined;
       
-      if (enableLogin && password) {
-        console.log("Checking existing user (isolated) for:", { email, mobile, tenantId: req.user.tenantId });
-        // Check if user already exists IN THIS TENANT ONLY
-        let existingUser = null;
-        if (email && email.trim() !== "") {
-          existingUser = await tx.user.findUnique({ 
-            where: { 
-              email_tenantId: { 
-                email: email.toLowerCase().trim(), 
-                tenantId: req.user.tenantId 
-              } 
+      console.log("Checking existing user (isolated) for:", { email, mobile, tenantId: req.user.tenantId });
+      // Check if user already exists IN THIS TENANT ONLY
+      let existingUser = null;
+      if (email && email.trim() !== "") {
+        existingUser = await tx.user.findUnique({ 
+          where: { 
+            email_tenantId: { 
+              email: email.toLowerCase().trim(), 
+              tenantId: req.user.tenantId 
             } 
-          });
-        }
-        if (!existingUser && mobile && mobile.trim() !== "") {
-          existingUser = await tx.user.findUnique({ 
-            where: { 
-              mobile_tenantId: { 
-                mobile: mobile.trim(), 
-                tenantId: req.user.tenantId 
-              } 
+          } 
+        });
+      }
+      if (!existingUser && mobile && mobile.trim() !== "") {
+        existingUser = await tx.user.findUnique({ 
+          where: { 
+            mobile_tenantId: { 
+              mobile: mobile.trim(), 
+              tenantId: req.user.tenantId 
             } 
-          });
-        }
+          } 
+        });
+      }
 
-        if (existingUser) {
-          userId = existingUser.id;
-        } else {
-          const hashedPassword = await bcrypt.hash(password, 10);
-          const user = await tx.user.create({
-            data: {
-              name,
-              email: email || undefined,
-              mobile: mobile || undefined,
-              password: hashedPassword,
-              role: "MEMBER",
-              tenantId: req.user.tenantId,
-            }
-          });
-          userId = user.id;
-        }
+      if (existingUser) {
+        userId = existingUser.id;
+      } else {
+        const fallbackPassword = mobile ? mobile.trim() : "123456";
+        const passwordToHash = (password && password.trim() !== "") ? password : fallbackPassword;
+        const hashedPassword = await bcrypt.hash(passwordToHash, 10);
+        const user = await tx.user.create({
+          data: {
+            name,
+            email: email || undefined,
+            mobile: mobile || undefined,
+            password: hashedPassword,
+            role: "MEMBER",
+            tenantId: req.user.tenantId,
+          }
+        });
+        userId = user.id;
       }
 
       const member = await tx.member.create({
@@ -105,6 +111,7 @@ router.post("/", authorize(["TENANT_ADMIN"]), async (req: any, res) => {
           paidUntil: paidUntil ? new Date(paidUntil) : null,
           photoUrl,
           idProofUrl,
+          createdAt: createdAt ? new Date(createdAt) : undefined,
         },
       });
 
@@ -198,7 +205,7 @@ router.patch("/:id/vacant", authorize(["TENANT_ADMIN"]), async (req: any, res) =
 });
 
 router.patch("/:id", authorize(["TENANT_ADMIN"]), async (req: any, res) => {
-  const { name, email, mobile, flatNo, address, outstandingDues, status, password, enableLogin, defaultTenure, paidUntil, photoUrl, idProofUrl } = req.body;
+  const { name, email, mobile, flatNo, address, outstandingDues, status, password, enableLogin, defaultTenure, paidUntil, photoUrl, idProofUrl, createdAt } = req.body;
   try {
     const result = await prisma.$transaction(async (tx) => {
       const currentMember = await tx.member.findUnique({
@@ -210,32 +217,32 @@ router.patch("/:id", authorize(["TENANT_ADMIN"]), async (req: any, res) => {
 
       let userId = currentMember.userId;
 
-      if (enableLogin) {
-        if (userId) {
-          // Update existing user
-          const updateData: any = { name, email: email || undefined, mobile: mobile || undefined };
-          if (password) {
-            updateData.password = await bcrypt.hash(password, 10);
-          }
-          await tx.user.update({
-            where: { id: userId },
-            data: updateData
-          });
-        } else if (password) {
-          // Create new user
-          const hashedPassword = await bcrypt.hash(password, 10);
-          const user = await tx.user.create({
-            data: {
-              name,
-              email: email || undefined,
-              mobile: mobile || undefined,
-              password: hashedPassword,
-              role: "MEMBER",
-              tenantId: req.user.tenantId,
-            }
-          });
-          userId = user.id;
+      if (userId) {
+        // Update existing user
+        const updateData: any = { name, email: email || undefined, mobile: mobile || undefined };
+        if (password && password.trim() !== "") {
+          updateData.password = await bcrypt.hash(password, 10);
         }
+        await tx.user.update({
+          where: { id: userId },
+          data: updateData
+        });
+      } else {
+        // Create new user
+        const fallbackPassword = mobile ? mobile.trim() : "123456";
+        const passwordToHash = (password && password.trim() !== "") ? password : fallbackPassword;
+        const hashedPassword = await bcrypt.hash(passwordToHash, 10);
+        const user = await tx.user.create({
+          data: {
+            name,
+            email: email || undefined,
+            mobile: mobile || undefined,
+            password: hashedPassword,
+            role: "MEMBER",
+            tenantId: req.user.tenantId,
+          }
+        });
+        userId = user.id;
       }
 
       const member = await tx.member.update({
@@ -253,6 +260,7 @@ router.patch("/:id", authorize(["TENANT_ADMIN"]), async (req: any, res) => {
           paidUntil: paidUntil ? new Date(paidUntil) : undefined,
           photoUrl: photoUrl !== undefined ? photoUrl : undefined,
           idProofUrl: idProofUrl !== undefined ? idProofUrl : undefined,
+          createdAt: createdAt ? new Date(createdAt) : undefined,
         },
       });
 

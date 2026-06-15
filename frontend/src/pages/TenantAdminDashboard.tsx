@@ -163,7 +163,7 @@ const StaffManagement = ({ token, currentUserId, designations }: { token: string
 
       <div style={{ marginTop: '1.5rem', padding: '1rem', backgroundColor: 'rgba(59,130,246,0.08)', borderRadius: '0.75rem', border: '1px solid rgba(59,130,246,0.2)' }}>
         <p style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', margin: 0 }}>
-          <strong style={{ color: 'var(--primary)' }}>💡 Login Info:</strong> Office bearers can log in at <code>gkrnagar.localhost:5173/login</code> using their email or mobile number and the password set here. They will have full Treasurer access to record payments and manage members.
+          <strong style={{ color: 'var(--primary)' }}>💡 Login Info:</strong> Office bearers can log in at <code>{window.location.host}/login</code> using their email or mobile number and the password set here. They will have full Treasurer access to record payments and manage members.
         </p>
       </div>
     </div>
@@ -903,9 +903,27 @@ const Helpdesk = ({ token }: { token: string | null }) => {
 
 const TenantAdminDashboard = () => {
   const { logout, token, user } = useAuth();
+  
+  const getTodayString = () => {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   const [activeTab, setActiveTab] = useState('overview');
+  const [maintenanceCosts, setMaintenanceCosts] = useState<any[]>([]);
+  const [visibleYearsCount, setVisibleYearsCount] = useState(0); // used as page offset in settings: 0=current page
+  const [selectedYear, setSelectedYear] = useState('');
+  const [yearlyAmount, setYearlyAmount] = useState('');
+  const [editingYearCost, setEditingYearCost] = useState<{ financialYear: string, amount: number } | null>(null);
   const [loading, setLoading] = useState(true);
   const [summary, setSummary] = useState<any>({ totalIncome: 0, totalExpenses: 0, totalOutstanding: 0, netBalance: 0, totalCashInHand: 0, thisMonthIncome: 0, thisMonthExpenses: 0, thisMonthNet: 0, lastMonthIncome: 0, lastMonthExpenses: 0, totalMembers: 0, membersWithDues: 0, maintenanceAmount: 0, monthlyTrends: [], expenseByCategory: [], recentPayments: [] });
+  const [maintenanceAmount, setMaintenanceAmount] = useState<number>(0);
+  const [quarterlyAmount, setQuarterlyAmount] = useState<string | number>('');
+  const [halfYearlyAmount, setHalfYearlyAmount] = useState<string | number>('');
+  const [annualAmount, setAnnualAmount] = useState<string | number>('');
   const [financials, setFinancials] = useState<any>({});
   const [reportFilters, setReportFilters] = useState({ month: '', year: new Date().getFullYear().toString(), startDate: '', endDate: '' });
   const [members, setMembers] = useState<any[]>([]);
@@ -921,7 +939,8 @@ const TenantAdminDashboard = () => {
     outstandingDues: 0, password: '', enableLogin: false, 
     defaultTenure: 'MONTHLY', paidUntil: '',
     initialPaymentAmount: 0, initialPaymentMode: 'CASH', initialPaymentNotes: '',
-    photoUrl: '', idProofUrl: ''
+    photoUrl: '', idProofUrl: '',
+    createdAt: getTodayString()
   });
   const [editingMember, setEditingMember] = useState<any>(null);
   const [uploading, setUploading] = useState(false);
@@ -978,7 +997,7 @@ const TenantAdminDashboard = () => {
       </div>
     </div>
   );
-  const [newPayment, setNewPayment] = useState({ memberId: '', amount: 0, mode: 'CASH', notes: '', paidMonths: 1, periodLabel: 'Monthly', coverageStartDate: '', coverageEndDate: '' });
+  const [newPayment, setNewPayment] = useState({ memberId: '', amount: 0, mode: 'CASH', notes: '', paidMonths: 1, periodLabel: 'Monthly', coverageStartDate: '', coverageEndDate: '', paymentDate: getTodayString() });
   const [upcomingMembers, setUpcomingMembers] = useState([]);
   const [newTransfer, setNewTransfer] = useState({ toAdminId: '', amount: 0, type: 'HANDOVER', referenceNote: '' });
   const [auditLogs, setAuditLogs] = useState([]);
@@ -990,6 +1009,15 @@ const TenantAdminDashboard = () => {
   useEffect(() => {
     if (token) fetchData();
   }, [token]);
+
+  useEffect(() => {
+    if (summary) {
+      setMaintenanceAmount(summary.maintenanceAmount || 0);
+      setQuarterlyAmount(summary.quarterlyAmount !== null && summary.quarterlyAmount !== undefined ? summary.quarterlyAmount : '');
+      setHalfYearlyAmount(summary.halfYearlyAmount !== null && summary.halfYearlyAmount !== undefined ? summary.halfYearlyAmount : '');
+      setAnnualAmount(summary.annualAmount !== null && summary.annualAmount !== undefined ? summary.annualAmount : '');
+    }
+  }, [summary]);
 
   const fetchFinancials = async () => {
     try {
@@ -1017,7 +1045,7 @@ const TenantAdminDashboard = () => {
     setLoading(true);
     try {
       const headers = { Authorization: `Bearer ${token}` };
-      const [membersRes, paymentsRes, cashRes, pendingRes, summaryRes, vendorsRes, logsRes, expensesRes, stRes, desRes, ecRes, upcomingRes, finRes] = await Promise.all([
+      const [membersRes, paymentsRes, cashRes, pendingRes, summaryRes, vendorsRes, logsRes, expensesRes, stRes, desRes, ecRes, upcomingRes, finRes, costsRes] = await Promise.all([
         axios.get('/members', { headers }),
         axios.get('/payments/history', { headers }),
         axios.get('/cash/in-hand', { headers }),
@@ -1031,6 +1059,7 @@ const TenantAdminDashboard = () => {
         axios.get('/master-data/EXPENSE_CATEGORY', { headers }),
         axios.get('/payments/upcoming', { headers }),
         axios.get('/reports/financials', { headers }),
+        axios.get('/tenants/maintenance-costs', { headers }),
       ]);
       setMembers(membersRes.data);
       setPayments(paymentsRes.data);
@@ -1045,6 +1074,7 @@ const TenantAdminDashboard = () => {
       setDesignations(desRes.data.map((x: any) => x.value));
       setExpenseCategories(ecRes.data.map((x: any) => x.value));
       setUpcomingMembers(upcomingRes.data);
+      setMaintenanceCosts(costsRes.data);
     } catch (err) {
       console.error('Error fetching data', err);
     } finally {
@@ -1093,7 +1123,7 @@ const TenantAdminDashboard = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       setShowModal(null);
-      setNewPayment({ memberId: '', amount: 0, mode: 'CASH', notes: '', paidMonths: 1, periodLabel: 'Monthly', coverageStartDate: '', coverageEndDate: '' });
+      setNewPayment({ memberId: '', amount: 0, mode: 'CASH', notes: '', paidMonths: 1, periodLabel: 'Monthly', coverageStartDate: '', coverageEndDate: '', paymentDate: getTodayString() });
       fetchData();
       alert('Payment recorded successfully');
     } catch (err: any) {
@@ -1113,7 +1143,8 @@ const TenantAdminDashboard = () => {
         outstandingDues: 0, password: '', enableLogin: false, 
         defaultTenure: 'MONTHLY', paidUntil: '', 
         initialPaymentAmount: 0, initialPaymentMode: 'CASH', initialPaymentNotes: '',
-        photoUrl: '', idProofUrl: '' 
+        photoUrl: '', idProofUrl: '',
+        createdAt: getTodayString()
       });
       fetchData();
       alert('Member added successfully');
@@ -1143,7 +1174,8 @@ const TenantAdminDashboard = () => {
       enableLogin: !!m.userId,
       paidUntil: m.paidUntil ? new Date(m.paidUntil).toISOString().split('T')[0] : '',
       photoUrl: m.photoUrl || '',
-      idProofUrl: m.idProofUrl || ''
+      idProofUrl: m.idProofUrl || '',
+      createdAt: m.createdAt ? new Date(m.createdAt).toISOString().split('T')[0] : getTodayString()
     });
     setShowModal('edit-member');
   };
@@ -1272,11 +1304,14 @@ const TenantAdminDashboard = () => {
   };
 
   const exportPayments = () => {
-    const headers = ['Receipt No', 'Member Name', 'Flat No', 'Amount', 'Mode', 'Date', 'Period', 'Status'];
-    const rows = payments.map((p: any) => [
-      p.receiptNumber, p.member?.name || '', p.member?.flatNo || '', p.amount, 
-      p.mode, new Date(p.paymentDate).toLocaleDateString(), p.periodLabel || '', p.status
-    ]);
+    const headers = ['Receipt No', 'Member Name', 'Flat No', 'Amount', 'Mode', 'Date', 'Financial Year', 'Period', 'Status'];
+    const rows = payments.map((p: any) => {
+      const d = new Date(p.paymentDate);
+      const fyStart = d.getMonth() >= 3 ? d.getFullYear() : d.getFullYear() - 1;
+      const fy = `${fyStart}-${((fyStart + 1) % 100).toString().padStart(2, '0')}`;
+      return [p.receiptNumber, p.member?.name || '', p.member?.flatNo || '', p.amount,
+        p.mode, d.toLocaleDateString(), fy, p.periodLabel || '', p.status];
+    });
     exportTableToCSV(`payments_${new Date().toISOString().split('T')[0]}.csv`, headers, rows);
   };
 
@@ -1595,18 +1630,35 @@ const TenantAdminDashboard = () => {
                     <th>Amount</th>
                     <th>Mode</th>
                     <th>Date</th>
+                    <th>Fin. Year</th>
                     <th>Status</th>
                     <th style={{ textAlign: 'right' }}>Action</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {payments.map((p: any) => (
+                  {payments.map((p: any) => {
+                    const pd = new Date(p.paymentDate);
+                    const fyStart = pd.getMonth() >= 3 ? pd.getFullYear() : pd.getFullYear() - 1;
+                    const fy = `${fyStart}-${((fyStart + 1) % 100).toString().padStart(2, '0')}`;
+                    return (
                     <tr key={p.id}>
                       <td><code style={{ fontSize: '0.8125rem' }}>{p.receiptNumber}</code></td>
                       <td><strong>{p.member?.name}</strong></td>
                       <td style={{ fontWeight: 600 }}>₹{p.amount.toLocaleString()}</td>
                       <td><span className={`badge ${p.mode === 'CASH' ? 'badge-warning' : 'badge-success'}`}>{p.mode}</span></td>
-                      <td style={{ fontSize: '0.8125rem' }}>{new Date(p.paymentDate).toLocaleDateString()}</td>
+                      <td style={{ fontSize: '0.8125rem' }}>{pd.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
+                      <td>
+                        <span style={{
+                          display: 'inline-block',
+                          padding: '0.2rem 0.55rem',
+                          borderRadius: '0.375rem',
+                          fontSize: '0.75rem',
+                          fontWeight: 600,
+                          backgroundColor: 'rgba(37,99,235,0.1)',
+                          color: 'var(--primary)',
+                          whiteSpace: 'nowrap',
+                        }}>{fy}</span>
+                      </td>
                       <td>
                         <span className={`badge ${p.status === 'PAID' ? 'badge-success' : 'badge-error'}`}>
                           {p.status}
@@ -1625,7 +1677,8 @@ const TenantAdminDashboard = () => {
                         </div>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -1929,7 +1982,18 @@ const TenantAdminDashboard = () => {
         );
       case 'vendors':
         return <VendorManagement token={token} vendors={vendors} onRefresh={fetchData} serviceTypes={serviceTypes} />;
-      case 'settings':
+      case 'settings': {
+        const now = new Date();
+        const curFYStart = now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1;
+        const toFY = (y: number) => `${y}-${((y + 1) % 100).toString().padStart(2, '0')}`;
+
+        // Page-based: show 5 years per page. visibleYearsCount = page offset (0 = current page)
+        const pageOffset = visibleYearsCount;
+        const pageStart = curFYStart + pageOffset * 5; // first year of current page
+        const pageYears = Array.from({ length: 5 }, (_, i) => toFY(pageStart + i));
+        const pageLabel = `${toFY(pageStart)} — ${toFY(pageStart + 4)}`;
+        const canGoPrev = pageStart - 5 >= 2017; // don't go before 2017
+
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
             <div className="card" style={{ maxWidth: '800px' }}>
@@ -1937,42 +2001,248 @@ const TenantAdminDashboard = () => {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
                 <div>
                   <label style={{ fontSize: '0.875rem', fontWeight: 500, marginBottom: '0.5rem', display: 'block' }}>Base Monthly Amount (₹)</label>
-                  <input type="number" defaultValue={summary.maintenanceAmount || 0} id="maintenanceAmount" />
+                  <input type="number" value={maintenanceAmount ?? 0} onChange={(e) => setMaintenanceAmount(parseFloat(e.target.value) || 0)} id="maintenanceAmount" />
                 </div>
                 <div>
                   <label style={{ fontSize: '0.875rem', fontWeight: 500, marginBottom: '0.5rem', display: 'block' }}>Quarterly Amount (₹)</label>
-                  <input type="number" defaultValue={summary.quarterlyAmount || ''} id="quarterlyAmount" placeholder="Optional discounted price" />
+                  <input type="number" value={quarterlyAmount ?? ''} onChange={(e) => setQuarterlyAmount(e.target.value)} id="quarterlyAmount" placeholder="Optional discounted price" />
                 </div>
                 <div>
                   <label style={{ fontSize: '0.875rem', fontWeight: 500, marginBottom: '0.5rem', display: 'block' }}>Half-Yearly Amount (₹)</label>
-                  <input type="number" defaultValue={summary.halfYearlyAmount || ''} id="halfYearlyAmount" placeholder="Optional discounted price" />
+                  <input type="number" value={halfYearlyAmount ?? ''} onChange={(e) => setHalfYearlyAmount(e.target.value)} id="halfYearlyAmount" placeholder="Optional discounted price" />
                 </div>
                 <div>
                   <label style={{ fontSize: '0.875rem', fontWeight: 500, marginBottom: '0.5rem', display: 'block' }}>Annual Amount (₹)</label>
-                  <input type="number" defaultValue={summary.annualAmount || ''} id="annualAmount" placeholder="Optional discounted price" />
+                  <input type="number" value={annualAmount ?? ''} onChange={(e) => setAnnualAmount(e.target.value)} id="annualAmount" placeholder="Optional discounted price" />
                 </div>
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '1rem', borderTop: '1px solid var(--border-color)' }}>
                 <button className="btn btn-primary" onClick={async () => {
-                  const amt = (document.getElementById('maintenanceAmount') as HTMLInputElement).value;
-                  const qAmt = (document.getElementById('quarterlyAmount') as HTMLInputElement).value;
-                  const hAmt = (document.getElementById('halfYearlyAmount') as HTMLInputElement).value;
-                  const aAmt = (document.getElementById('annualAmount') as HTMLInputElement).value;
-                  
                   await axios.patch('/tenants/settings', { 
-                    maintenanceAmount: parseFloat(amt) || 0,
-                    quarterlyAmount: parseFloat(qAmt) || null,
-                    halfYearlyAmount: parseFloat(hAmt) || null,
-                    annualAmount: parseFloat(aAmt) || null
+                    maintenanceAmount: parseFloat(maintenanceAmount.toString()) || 0,
+                    quarterlyAmount: quarterlyAmount !== '' ? parseFloat(quarterlyAmount.toString()) : null,
+                    halfYearlyAmount: halfYearlyAmount !== '' ? parseFloat(halfYearlyAmount.toString()) : null,
+                    annualAmount: annualAmount !== '' ? parseFloat(annualAmount.toString()) : null
                   }, { headers: { Authorization: `Bearer ${token}` } });
                   
                   alert('Settings updated successfully');
+                  fetchData();
                 }}>Save Pricing Settings</button>
               </div>
             </div>
+
+            <div className="card" style={{ maxWidth: '800px' }}>
+              <h3 style={{ marginBottom: '0.5rem' }}>Financial Year Maintenance Cost Setup</h3>
+              <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
+                Define/edit the annual maintenance cost for members for specific financial years.
+              </p>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
+                <div>
+                  <label style={{ fontSize: '0.875rem', fontWeight: 500, marginBottom: '0.5rem', display: 'block' }}>Select Financial Year</label>
+
+                  {/* Year range navigator */}
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    marginBottom: '0.5rem',
+                    padding: '0.4rem 0.6rem',
+                    backgroundColor: 'var(--bg-secondary)',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: '0.5rem',
+                  }}>
+                    <button
+                      type="button"
+                      disabled={!canGoPrev}
+                      onClick={() => {
+                        setVisibleYearsCount(prev => prev - 1);
+                        if (selectedYear && !pageYears.slice(5).includes(selectedYear)) setSelectedYear('');
+                      }}
+                      style={{
+                        padding: '0.25rem 0.6rem',
+                        borderRadius: '0.375rem',
+                        border: '1px solid var(--border-color)',
+                        backgroundColor: canGoPrev ? 'var(--bg-tertiary)' : 'transparent',
+                        color: canGoPrev ? 'var(--text-primary)' : 'var(--text-secondary)',
+                        cursor: canGoPrev ? 'pointer' : 'not-allowed',
+                        fontSize: '0.8rem',
+                        opacity: canGoPrev ? 1 : 0.4,
+                        display: 'flex', alignItems: 'center', gap: '0.25rem',
+                      }}
+                    >
+                      ◀ Prev 5
+                    </button>
+
+                    <span style={{ flex: 1, textAlign: 'center', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                      {pageLabel}
+                    </span>
+
+                    {pageOffset !== 0 && (
+                      <button
+                        type="button"
+                        onClick={() => { setVisibleYearsCount(0); setSelectedYear(''); }}
+                        style={{
+                          padding: '0.25rem 0.5rem',
+                          borderRadius: '0.375rem',
+                          border: '1px solid var(--primary)',
+                          backgroundColor: 'rgba(37,99,235,0.08)',
+                          color: 'var(--primary)',
+                          cursor: 'pointer',
+                          fontSize: '0.75rem',
+                          fontWeight: 600,
+                        }}
+                      >
+                        ⌂ Current
+                      </button>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={() => setVisibleYearsCount(prev => prev + 1)}
+                      style={{
+                        padding: '0.25rem 0.6rem',
+                        borderRadius: '0.375rem',
+                        border: '1px solid var(--border-color)',
+                        backgroundColor: 'var(--bg-tertiary)',
+                        color: 'var(--text-primary)',
+                        cursor: 'pointer',
+                        fontSize: '0.8rem',
+                        display: 'flex', alignItems: 'center', gap: '0.25rem',
+                      }}
+                    >
+                      Next 5 ▶
+                    </button>
+                  </div>
+
+                  {/* Dropdown showing only the current 5-year page */}
+                  <select
+                    value={selectedYear}
+                    onChange={(e) => setSelectedYear(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '0.65rem 1rem',
+                      backgroundColor: 'var(--bg-tertiary)',
+                      border: `2px solid ${selectedYear ? 'var(--primary)' : 'var(--border-color)'}`,
+                      borderRadius: '0.625rem',
+                      color: selectedYear ? 'var(--text-primary)' : 'var(--text-secondary)',
+                      fontSize: '0.9rem',
+                      fontWeight: selectedYear ? 600 : 400,
+                      cursor: 'pointer',
+                      outline: 'none',
+                      transition: 'border-color 0.15s ease',
+                    }}
+                  >
+                    <option value="">-- Choose Financial Year --</option>
+                    {pageYears.map(yr => (
+                      <option key={yr} value={yr}>
+                        {yr}{yr === toFY(curFYStart) ? '  ← Current' : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '0.875rem', fontWeight: 500, marginBottom: '0.5rem', display: 'block' }}>Annual Maintenance Cost (₹)</label>
+                  <input
+                    type="number"
+                    placeholder="Enter cost (e.g. 18000)"
+                    value={yearlyAmount}
+                    onChange={(e) => setYearlyAmount(e.target.value)}
+                    style={{ width: '100%', padding: '0.625rem 0.875rem', backgroundColor: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', borderRadius: '0.5rem', color: 'var(--text-primary)' }}
+                  />
+                </div>
+              </div>
+              
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', paddingTop: '1rem', borderTop: '1px solid var(--border-color)', marginBottom: '1.5rem' }}>
+                {editingYearCost && (
+                  <button className="btn btn-secondary" onClick={() => {
+                    setEditingYearCost(null);
+                    setSelectedYear('');
+                    setYearlyAmount('');
+                  }}>Cancel Edit</button>
+                )}
+                <button 
+                  className="btn btn-primary" 
+                  onClick={async () => {
+                    if (!selectedYear) {
+                      alert('Please select a financial year');
+                      return;
+                    }
+                    if (!yearlyAmount || parseFloat(yearlyAmount) <= 0) {
+                      alert('Please enter a valid annual amount');
+                      return;
+                    }
+                    try {
+                      await axios.post('/tenants/maintenance-costs', {
+                        financialYear: selectedYear,
+                        amount: parseFloat(yearlyAmount)
+                      }, { headers: { Authorization: `Bearer ${token}` } });
+                      
+                      alert('Maintenance cost saved successfully');
+                      setEditingYearCost(null);
+                      setSelectedYear('');
+                      setYearlyAmount('');
+                      // Refresh data
+                      const resCosts = await axios.get('/tenants/maintenance-costs', { headers: { Authorization: `Bearer ${token}` } });
+                      setMaintenanceCosts(resCosts.data);
+                    } catch (err) {
+                      alert('Error saving maintenance cost');
+                    }
+                  }}
+                >
+                  {editingYearCost ? 'Update Cost' : 'Setup Cost'}
+                </button>
+              </div>
+
+              {/* List of configured costs */}
+              <h4 style={{ marginBottom: '1rem', fontSize: '0.95rem' }}>Configured Maintenance Costs</h4>
+              <div className="table-container">
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '2px solid var(--border-color)', textAlign: 'left' }}>
+                      <th style={{ padding: '0.75rem' }}>Financial Year</th>
+                      <th style={{ padding: '0.75rem' }}>Annual Cost</th>
+                      <th style={{ padding: '0.75rem', textAlign: 'right' }}>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {maintenanceCosts.length === 0 ? (
+                      <tr>
+                        <td colSpan={3} style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '2rem' }}>
+                          No maintenance costs configured per financial year yet. Setup the first one above.
+                        </td>
+                      </tr>
+                    ) : (
+                      maintenanceCosts.map((c: any) => (
+                        <tr key={c.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                          <td style={{ padding: '0.75rem' }}><strong>{c.financialYear}</strong></td>
+                          <td style={{ padding: '0.75rem', fontWeight: 600, color: 'var(--primary)' }}>₹{c.amount.toLocaleString()}</td>
+                          <td style={{ padding: '0.75rem', textAlign: 'right' }}>
+                            <button 
+                              className="btn btn-secondary" 
+                              style={{ padding: '0.4rem 0.75rem', fontSize: '0.8rem' }}
+                              onClick={() => {
+                                setEditingYearCost(c);
+                                setSelectedYear(c.financialYear);
+                                setYearlyAmount(c.amount.toString());
+                              }}
+                            >
+                              Edit
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
             <MastersManagement token={token} onRefresh={fetchData} />
           </div>
         );
+      }
       case 'staff':
         return <StaffManagement token={token} currentUserId={user?.id} designations={designations} />;
       case 'upcoming':
@@ -2213,6 +2483,10 @@ const TenantAdminDashboard = () => {
                       <label style={{ fontSize: '0.875rem', fontWeight: 500, marginBottom: '0.4rem', display: 'block' }}>Email Address</label>
                       <input type="email" value={newMember.email} onChange={(e) => setNewMember({ ...newMember, email: e.target.value })} />
                     </div>
+                    <div>
+                      <label style={{ fontSize: '0.875rem', fontWeight: 500, marginBottom: '0.4rem', display: 'block' }}>Registration Date</label>
+                      <input type="date" required value={newMember.createdAt} onChange={(e) => setNewMember({ ...newMember, createdAt: e.target.value })} />
+                    </div>
 
                     <div style={{ backgroundColor: 'var(--bg-tertiary)', padding: '1rem', borderRadius: '0.75rem', gridColumn: 'span 2', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', border: '1px solid var(--border-color)' }}>
                       <div>
@@ -2346,7 +2620,7 @@ const TenantAdminDashboard = () => {
                           .map((p: any) => (
                             <tr key={p.id}>
                               <td><code style={{ fontSize: '0.8125rem' }}>{p.receiptNumber}</code></td>
-                              <td style={{ fontSize: '0.875rem' }}>{new Date(p.paymentDate).toLocaleDateString()}</td>
+                              <td style={{ fontSize: '0.875rem' }}>{new Date(p.paymentDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
                               <td style={{ fontWeight: 600 }}>₹{p.amount.toLocaleString()}</td>
                               <td><span className={`badge ${p.mode === 'CASH' ? 'badge-warning' : 'badge-success'}`}>{p.mode}</span></td>
                               <td><span className={`badge ${p.status === 'PAID' ? 'badge-success' : 'badge-error'}`}>{p.status}</span></td>
@@ -2506,6 +2780,14 @@ const TenantAdminDashboard = () => {
                       <label style={{ fontSize: '0.875rem', fontWeight: 500, marginBottom: '0.4rem', display: 'block' }}>Email Address</label>
                       <input type="email" value={editingMember.email} onChange={(e) => setEditingMember({ ...editingMember, email: e.target.value })} />
                     </div>
+                    <div>
+                      <label style={{ fontSize: '0.875rem', fontWeight: 500, marginBottom: '0.4rem', display: 'block' }}>Outstanding Dues (₹)</label>
+                      <input type="number" value={editingMember.outstandingDues} onChange={(e) => setEditingMember({ ...editingMember, outstandingDues: parseFloat(e.target.value) || 0 })} />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '0.875rem', fontWeight: 500, marginBottom: '0.4rem', display: 'block' }}>Registration Date</label>
+                      <input type="date" required value={editingMember.createdAt} onChange={(e) => setEditingMember({ ...editingMember, createdAt: e.target.value })} />
+                    </div>
 
                     <div style={{ backgroundColor: 'var(--bg-tertiary)', padding: '1rem', borderRadius: '0.75rem', gridColumn: 'span 2', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', border: '1px solid var(--border-color)' }}>
                       <div>
@@ -2630,13 +2912,17 @@ const TenantAdminDashboard = () => {
                     </div>
                     <div className="grid-2">
                       <div>
+                        <label style={{ fontSize: '0.875rem', fontWeight: 500, marginBottom: '0.4rem', display: 'block' }}>Payment Date</label>
+                        <input type="date" required value={newPayment.paymentDate} onChange={(e) => setNewPayment({ ...newPayment, paymentDate: e.target.value })} />
+                      </div>
+                      <div>
                         <label style={{ fontSize: '0.875rem', fontWeight: 500, marginBottom: '0.4rem', display: 'block' }}>Amount Received (₹) <span style={{fontSize: '0.75rem', color: 'var(--text-secondary)'}}>(Base: ₹{summary.maintenanceAmount || 0})</span></label>
                         <input type="number" required value={newPayment.amount} onChange={(e) => setNewPayment({ ...newPayment, amount: parseFloat(e.target.value) || 0 })} />
                       </div>
-                      <div>
-                        <label style={{ fontSize: '0.875rem', fontWeight: 500, marginBottom: '0.4rem', display: 'block' }}>Reference / Notes</label>
-                        <input type="text" placeholder="e.g. Receipt No, Transaction ID" value={newPayment.notes} onChange={(e) => setNewPayment({ ...newPayment, notes: e.target.value })} />
-                      </div>
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '0.875rem', fontWeight: 500, marginBottom: '0.4rem', display: 'block' }}>Reference / Notes</label>
+                      <input type="text" placeholder="e.g. Receipt No, Transaction ID" value={newPayment.notes} onChange={(e) => setNewPayment({ ...newPayment, notes: e.target.value })} style={{ width: '100%', padding: '0.625rem 0.875rem', backgroundColor: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', borderRadius: '0.5rem', color: 'var(--text-primary)' }} />
                     </div>
                     <div className="grid-2" style={{ backgroundColor: 'var(--bg-secondary)', padding: '1rem', borderRadius: '0.5rem', border: '1px dashed var(--border-color)' }}>
                       <div style={{ gridColumn: 'span 2' }}>

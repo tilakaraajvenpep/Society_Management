@@ -168,4 +168,55 @@ router.get("/logs", authenticate, authorize(["TENANT_ADMIN"]), async (req: any, 
   }
 });
 
+router.get("/maintenance-costs", authenticate, authorize(["TENANT_ADMIN"]), async (req: any, res) => {
+  try {
+    const costs = await prisma.maintenanceCost.findMany({
+      where: { tenantId: req.user.tenantId },
+      orderBy: { financialYear: "asc" }
+    });
+    res.json(costs);
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching maintenance costs", error });
+  }
+});
+
+router.post("/maintenance-costs", authenticate, authorize(["TENANT_ADMIN"]), async (req: any, res) => {
+  const { financialYear, amount } = req.body;
+  if (!financialYear || amount === undefined || amount === null) {
+    return res.status(400).json({ message: "Financial year and amount are required" });
+  }
+  try {
+    const cost = await prisma.maintenanceCost.upsert({
+      where: {
+        tenantId_financialYear: {
+          tenantId: req.user.tenantId,
+          financialYear
+        }
+      },
+      update: {
+        amount: parseFloat(amount.toString())
+      },
+      create: {
+        tenantId: req.user.tenantId,
+        financialYear,
+        amount: parseFloat(amount.toString())
+      }
+    });
+
+    // Create audit log
+    await prisma.auditLog.create({
+      data: {
+        tenantId: req.user.tenantId,
+        actionType: "MAINTENANCE_COST_SETUP",
+        performedBy: req.user.name,
+        details: `Set maintenance cost for financial year ${financialYear} to ₹${amount}`
+      }
+    });
+
+    res.json(cost);
+  } catch (error) {
+    res.status(500).json({ message: "Error setting up maintenance cost", error });
+  }
+});
+
 export default router;

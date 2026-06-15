@@ -35,6 +35,7 @@ model Tenant {
   users              User[]
   vendors            Vendor[]
   tickets            Ticket[]
+  maintenanceCosts   MaintenanceCost[]
 }
 
 model User {
@@ -301,3 +302,17 @@ enum TicketStatus {
   CLOSED
   ARCHIVED
 }
+
+model MaintenanceCost {
+  id            String   @id @default(uuid())
+  tenantId      String
+  financialYear String
+  amount        Float
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, financialYear])
+}
+

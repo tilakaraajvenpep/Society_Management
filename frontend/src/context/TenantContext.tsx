@@ -23,18 +23,19 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const detectTenant = async () => {
       const hostname = window.location.hostname;
       const pathname = window.location.pathname;
-      const parts = hostname.split('.');
       
       let slug = '';
 
-      // 1. Check for subdomain (e.g., gkrnagar.localhost)
-      if (parts.length > 1 && parts[0] !== 'www' && parts[1] === 'localhost') {
-        slug = parts[0];
+      const baseDomain = import.meta.env.VITE_BASE_DOMAIN || 'localhost';
+
+      // 1. Check for subdomain (e.g., gkrnagar.localhost or gkrnagar.societypro.vercel.app)
+      if (hostname !== baseDomain && hostname.endsWith('.' + baseDomain)) {
+        slug = hostname.substring(0, hostname.length - baseDomain.length - 1);
       } 
       // 2. Fallback: Check for slug in path (e.g., /gkrnagar)
       else if (pathname !== '/' && pathname.split('/').length === 2) {
         const potentialSlug = pathname.split('/')[1];
-        if (!['login', 'super-admin', 'tenant-admin'].includes(potentialSlug)) {
+        if (!['login', 'super-admin', 'tenant-admin', 'member'].includes(potentialSlug)) {
           slug = potentialSlug;
         }
       }

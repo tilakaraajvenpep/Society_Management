@@ -7,7 +7,7 @@ const router = express.Router();
 router.use(authenticate);
 
 router.post("/", authorize(["TENANT_ADMIN"]), async (req: any, res) => {
-  const { memberId, amount, mode, notes, subscriptionId, paidMonths, periodLabel, coverageStartDate, coverageEndDate } = req.body;
+  const { memberId, amount, mode, notes, subscriptionId, paidMonths, periodLabel, coverageStartDate, coverageEndDate, paymentDate } = req.body;
   try {
     // Fetch member name and current paidUntil
     const currentMember = await prisma.member.findUnique({ where: { id: memberId }, select: { name: true, flatNo: true, paidUntil: true } });
@@ -37,6 +37,7 @@ router.post("/", authorize(["TENANT_ADMIN"]), async (req: any, res) => {
           periodLabel: label,
           coverageStartDate: coverageStartDate ? new Date(coverageStartDate) : null,
           coverageEndDate: coverageEndDate ? new Date(coverageEndDate) : null,
+          paymentDate: paymentDate ? new Date(paymentDate) : undefined,
         },
       });
 

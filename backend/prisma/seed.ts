@@ -41,6 +41,7 @@ async function main() {
         billingCycle: "MONTHLY",
         maintenanceAmount: 2500,
         slug: "sunrise", // Add slug
+        enableForums: true,
       },
     });
     console.log("Sample Tenant created:", tenant.name);
