@@ -974,8 +974,27 @@ const TenantAdminDashboard = () => {
       }
       alert(`${type === 'photo' ? 'Photo' : 'ID Proof'} uploaded successfully!`);
     } catch (err) {
-      console.error('Upload error', err);
-      alert('Error uploading file.');
+      console.warn('Backend upload failed, falling back to local Base64 storage', err);
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const base64Url = e.target?.result as string;
+        if (showModal === 'member') {
+          setNewMember((prev: any) => ({ 
+            ...prev, 
+            [type === 'photo' ? 'photoUrl' : 'idProofUrl']: base64Url 
+          }));
+        } else if (editingMember) {
+          setEditingMember((prev: any) => ({ 
+            ...prev, 
+            [type === 'photo' ? 'photoUrl' : 'idProofUrl']: base64Url 
+          }));
+        }
+        alert(`${type === 'photo' ? 'Photo' : 'ID Proof'} processed and attached successfully!`);
+      };
+      reader.onerror = () => {
+        alert('Error reading file.');
+      };
+      reader.readAsDataURL(file);
     } finally {
       setUploading(false);
     }
@@ -985,7 +1004,7 @@ const TenantAdminDashboard = () => {
     <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 3000, padding: '2rem' }} onClick={onClose}>
       <div style={{ position: 'relative', maxWidth: '90vw', maxHeight: '90vh' }} onClick={e => e.stopPropagation()}>
         <button onClick={onClose} style={{ position: 'absolute', top: '-2.5rem', right: '-0.5rem', background: 'none', border: 'none', color: 'white', fontSize: '2rem', cursor: 'pointer' }}>&times;</button>
-        {url.toLowerCase().endsWith('.pdf') ? (
+        {url.toLowerCase().endsWith('.pdf') || url.startsWith('data:application/pdf') ? (
           <iframe src={url} style={{ width: '80vw', height: '80vh', border: 'none', borderRadius: '0.5rem' }} title="Document Viewer" />
         ) : (
           <img src={url} alt={type} style={{ maxWidth: '100%', maxHeight: '80vh', borderRadius: '0.5rem', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)' }} />
@@ -2575,11 +2594,37 @@ const TenantAdminDashboard = () => {
             {showModal === 'member-history' && selectedMember && (
               <>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                  <div>
-                    <h2 style={{ fontSize: '1.25rem', marginBottom: '0.25rem' }}>Payment History</h2>
-                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
-                      {selectedMember.name} &mdash; Flat {selectedMember.flatNo}
-                    </p>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    {selectedMember.photoUrl ? (
+                      <img 
+                        src={selectedMember.photoUrl} 
+                        alt={selectedMember.name} 
+                        style={{ width: '48px', height: '48px', borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--primary)', cursor: 'pointer' }}
+                        onClick={() => setSelectedDoc({url: selectedMember.photoUrl, type: 'Profile Photo'})}
+                        title="Click to view full photo"
+                      />
+                    ) : (
+                      <div style={{ width: '48px', height: '48px', borderRadius: '50%', backgroundColor: 'var(--bg-secondary)', display: 'flex', justifyContent: 'center', alignItems: 'center', border: '1px solid var(--border-color)' }}>
+                        <Users size={20} style={{ color: 'var(--text-secondary)' }} />
+                      </div>
+                    )}
+                    <div>
+                      <h2 style={{ fontSize: '1.25rem', marginBottom: '0.25rem' }}>Member Info & History</h2>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                        <span style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
+                          {selectedMember.name} &mdash; Flat {selectedMember.flatNo}
+                        </span>
+                        {selectedMember.idProofUrl && (
+                          <button 
+                            className="btn btn-secondary" 
+                            style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem', borderRadius: '0.4rem' }}
+                            onClick={() => setSelectedDoc({url: selectedMember.idProofUrl, type: 'ID Proof'})}
+                          >
+                            <FileText size={12} style={{ color: 'var(--success)' }} /> View ID Proof
+                          </button>
+                        )}
+                      </div>
+                    </div>
                   </div>
                   <button onClick={() => setShowModal(null)} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: 'var(--text-secondary)' }}>&times;</button>
                 </div>
