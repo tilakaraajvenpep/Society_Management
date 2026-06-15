@@ -914,7 +914,6 @@ const TenantAdminDashboard = () => {
 
   const [activeTab, setActiveTab] = useState('overview');
   const [maintenanceCosts, setMaintenanceCosts] = useState<any[]>([]);
-  const [visibleYearsCount, setVisibleYearsCount] = useState(0); // used as page offset in settings: 0=current page
   const [selectedYear, setSelectedYear] = useState('');
   const [yearlyAmount, setYearlyAmount] = useState('');
   const [editingYearCost, setEditingYearCost] = useState<{ financialYear: string, amount: number } | null>(null);
