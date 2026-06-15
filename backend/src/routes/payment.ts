@@ -114,6 +114,7 @@ router.get("/upcoming", authorize(["TENANT_ADMIN"]), async (req: any, res) => {
         tenantId: req.user.tenantId,
         status: "ACTIVE",
         OR: [
+          { outstandingDues: { gt: 0 } },
           { paidUntil: null },
           { paidUntil: { lte: endOfThisMonth } }
         ]

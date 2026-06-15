@@ -2280,12 +2280,14 @@ const TenantAdminDashboard = () => {
                     <th>FLAT NO</th>
                     <th>MEMBER</th>
                     <th>PAID UNTIL</th>
+                    <th>OUTSTANDING DUES</th>
                     <th>STATUS</th>
                   </tr>
                 </thead>
                 <tbody>
                   {upcomingMembers.map((m: any) => {
-                    const isOverdue = m.paidUntil ? new Date(m.paidUntil) < new Date() : true;
+                    const hasDues = m.outstandingDues > 0;
+                    const isOverdue = m.paidUntil ? (new Date(m.paidUntil) < new Date() || hasDues) : true;
                     return (
                       <tr key={m.id}>
                         <td><strong>{m.flatNo}</strong></td>
@@ -2297,7 +2299,14 @@ const TenantAdminDashboard = () => {
                           {m.paidUntil ? new Date(m.paidUntil).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }) : 'No Record'}
                         </td>
                         <td>
-                          {isOverdue 
+                          <span style={{ fontWeight: 600, color: hasDues ? 'var(--error)' : 'var(--success)' }}>
+                            ₹{m.outstandingDues?.toLocaleString()}
+                          </span>
+                        </td>
+                        <td>
+                          {hasDues
+                            ? <span className="badge badge-error">Outstanding Dues</span>
+                            : isOverdue 
                             ? <span className="badge badge-error">Overdue</span>
                             : <span className="badge badge-warning">Due This Month</span>}
                         </td>
@@ -2306,7 +2315,7 @@ const TenantAdminDashboard = () => {
                   })}
                   {upcomingMembers.length === 0 && (
                     <tr>
-                      <td colSpan={4} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
+                      <td colSpan={5} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
                         No upcoming or overdue payments! All members are paid up.
                       </td>
                     </tr>
