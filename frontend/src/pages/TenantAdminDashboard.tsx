@@ -2006,12 +2006,8 @@ const TenantAdminDashboard = () => {
         const curFYStart = now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1;
         const toFY = (y: number) => `${y}-${((y + 1) % 100).toString().padStart(2, '0')}`;
 
-        // Page-based: show 5 years per page. visibleYearsCount = page offset (0 = current page)
-        const pageOffset = visibleYearsCount;
-        const pageStart = curFYStart + pageOffset * 5; // first year of current page
-        const pageYears = Array.from({ length: 5 }, (_, i) => toFY(pageStart + i));
-        const pageLabel = `${toFY(pageStart)} — ${toFY(pageStart + 4)}`;
-        const canGoPrev = pageStart - 5 >= 2017; // don't go before 2017
+        const quickYears = Array.from({ length: 5 }, (_, i) => toFY(curFYStart - 2 + i));
+        const dropdownYears = Array.from({ length: 19 }, (_, i) => toFY(curFYStart - 8 + i));
 
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -2056,113 +2052,91 @@ const TenantAdminDashboard = () => {
                 Define/edit the annual maintenance cost for members for specific financial years.
               </p>
               
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginBottom: '1.5rem' }}>
                 <div>
-                  <label style={{ fontSize: '0.875rem', fontWeight: 500, marginBottom: '0.5rem', display: 'block' }}>Select Financial Year</label>
+                  <label style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '0.75rem', display: 'block', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Select Financial Year</label>
+                  
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.6rem', alignItems: 'center' }}>
+                    {quickYears.map(yr => {
+                      const isSelected = selectedYear === yr;
+                      const isCurrent = yr === toFY(curFYStart);
+                      return (
+                        <button
+                          key={yr}
+                          type="button"
+                          onClick={() => setSelectedYear(yr)}
+                          style={{
+                            padding: '0.55rem 1.1rem',
+                            borderRadius: '2rem',
+                            border: `1px solid ${isSelected ? 'var(--primary)' : 'var(--border-color)'}`,
+                            backgroundColor: isSelected ? 'var(--primary)' : 'var(--bg-tertiary)',
+                            color: isSelected ? '#fff' : 'var(--text-primary)',
+                            fontSize: '0.875rem',
+                            fontWeight: isSelected ? 600 : 500,
+                            cursor: 'pointer',
+                            transition: 'all 0.15s ease-in-out',
+                            boxShadow: isSelected ? '0 4px 10px rgba(37, 99, 235, 0.25)' : 'none',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.4rem',
+                          }}
+                          onMouseEnter={(e) => {
+                            if (!isSelected) {
+                              e.currentTarget.style.backgroundColor = 'var(--bg-secondary)';
+                              e.currentTarget.style.borderColor = 'var(--text-secondary)';
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            if (!isSelected) {
+                              e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)';
+                              e.currentTarget.style.borderColor = 'var(--border-color)';
+                            }
+                          }}
+                        >
+                          {isCurrent && (
+                            <span style={{ 
+                              width: '6px', 
+                              height: '6px', 
+                              borderRadius: '50%', 
+                              backgroundColor: isSelected ? '#fff' : 'var(--primary)', 
+                              display: 'inline-block' 
+                            }}></span>
+                          )}
+                          {yr}
+                          {isCurrent && <span style={{ fontSize: '0.75rem', opacity: 0.8, fontWeight: 400 }}> (Current)</span>}
+                        </button>
+                      );
+                    })}
 
-                  {/* Year range navigator */}
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                    marginBottom: '0.5rem',
-                    padding: '0.4rem 0.6rem',
-                    backgroundColor: 'var(--bg-secondary)',
-                    border: '1px solid var(--border-color)',
-                    borderRadius: '0.5rem',
-                  }}>
-                    <button
-                      type="button"
-                      disabled={!canGoPrev}
-                      onClick={() => {
-                        setVisibleYearsCount(prev => prev - 1);
-                        if (selectedYear && !pageYears.slice(5).includes(selectedYear)) setSelectedYear('');
-                      }}
+                    <select
+                      value={quickYears.includes(selectedYear) ? "" : selectedYear}
+                      onChange={(e) => setSelectedYear(e.target.value)}
                       style={{
-                        padding: '0.25rem 0.6rem',
-                        borderRadius: '0.375rem',
-                        border: '1px solid var(--border-color)',
-                        backgroundColor: canGoPrev ? 'var(--bg-tertiary)' : 'transparent',
-                        color: canGoPrev ? 'var(--text-primary)' : 'var(--text-secondary)',
-                        cursor: canGoPrev ? 'pointer' : 'not-allowed',
-                        fontSize: '0.8rem',
-                        opacity: canGoPrev ? 1 : 0.4,
-                        display: 'flex', alignItems: 'center', gap: '0.25rem',
-                      }}
-                    >
-                      ◀ Prev 5
-                    </button>
-
-                    <span style={{ flex: 1, textAlign: 'center', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
-                      {pageLabel}
-                    </span>
-
-                    {pageOffset !== 0 && (
-                      <button
-                        type="button"
-                        onClick={() => { setVisibleYearsCount(0); setSelectedYear(''); }}
-                        style={{
-                          padding: '0.25rem 0.5rem',
-                          borderRadius: '0.375rem',
-                          border: '1px solid var(--primary)',
-                          backgroundColor: 'rgba(37,99,235,0.08)',
-                          color: 'var(--primary)',
-                          cursor: 'pointer',
-                          fontSize: '0.75rem',
-                          fontWeight: 600,
-                        }}
-                      >
-                        ⌂ Current
-                      </button>
-                    )}
-
-                    <button
-                      type="button"
-                      onClick={() => setVisibleYearsCount(prev => prev + 1)}
-                      style={{
-                        padding: '0.25rem 0.6rem',
-                        borderRadius: '0.375rem',
-                        border: '1px solid var(--border-color)',
-                        backgroundColor: 'var(--bg-tertiary)',
-                        color: 'var(--text-primary)',
+                        padding: '0.55rem 1.25rem',
+                        borderRadius: '2rem',
+                        border: `1px solid ${(!quickYears.includes(selectedYear) && selectedYear) ? 'var(--primary)' : 'var(--border-color)'}`,
+                        backgroundColor: (!quickYears.includes(selectedYear) && selectedYear) ? 'var(--primary)' : 'var(--bg-tertiary)',
+                        color: (!quickYears.includes(selectedYear) && selectedYear) ? '#fff' : 'var(--text-primary)',
+                        fontSize: '0.875rem',
+                        fontWeight: (!quickYears.includes(selectedYear) && selectedYear) ? 600 : 500,
                         cursor: 'pointer',
-                        fontSize: '0.8rem',
-                        display: 'flex', alignItems: 'center', gap: '0.25rem',
+                        outline: 'none',
+                        transition: 'all 0.15s ease-in-out',
+                        boxShadow: (!quickYears.includes(selectedYear) && selectedYear) ? '0 4px 10px rgba(37, 99, 235, 0.25)' : 'none',
                       }}
                     >
-                      Next 5 ▶
-                    </button>
+                      <option value="" style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}>More Years ▾</option>
+                      {dropdownYears.filter(yr => !quickYears.includes(yr)).map(yr => (
+                        <option key={yr} value={yr} style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
+                          {yr}
+                        </option>
+                      ))}
+                    </select>
                   </div>
-
-                  {/* Dropdown showing only the current 5-year page */}
-                  <select
-                    value={selectedYear}
-                    onChange={(e) => setSelectedYear(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '0.65rem 1rem',
-                      backgroundColor: 'var(--bg-tertiary)',
-                      border: `2px solid ${selectedYear ? 'var(--primary)' : 'var(--border-color)'}`,
-                      borderRadius: '0.625rem',
-                      color: selectedYear ? 'var(--text-primary)' : 'var(--text-secondary)',
-                      fontSize: '0.9rem',
-                      fontWeight: selectedYear ? 600 : 400,
-                      cursor: 'pointer',
-                      outline: 'none',
-                      transition: 'border-color 0.15s ease',
-                    }}
-                  >
-                    <option value="">-- Choose Financial Year --</option>
-                    {pageYears.map(yr => (
-                      <option key={yr} value={yr}>
-                        {yr}{yr === toFY(curFYStart) ? '  ← Current' : ''}
-                      </option>
-                    ))}
-                  </select>
                 </div>
 
-                <div>
-                  <label style={{ fontSize: '0.875rem', fontWeight: 500, marginBottom: '0.5rem', display: 'block' }}>Annual Maintenance Cost (₹)</label>
+                <div style={{ maxWidth: '300px' }}>
+                  <label style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '0.5rem', display: 'block', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Annual Maintenance Cost (₹)</label>
                   <input
                     type="number"
                     placeholder="Enter cost (e.g. 18000)"
