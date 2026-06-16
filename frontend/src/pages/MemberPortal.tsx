@@ -438,6 +438,10 @@ const MemberPortal = () => {
         const isYearPaid = (startYear: number) => {
           const fyStr = `${startYear}-${((startYear + 1) % 100).toString().padStart(2, '0')}`;
           
+          // If the fee is not set for this year, it cannot be paid (displays Due status)
+          const configuredCost = memberInfo?.tenant?.maintenanceCosts?.find((c: any) => c.financialYear === fyStr);
+          if (!configuredCost) return false;
+          
           // 1. First check payment history whether a payment has been received in the member name for that year
           if (memberInfo?.payments && memberInfo.payments.length > 0) {
             // Check if any payment's periodLabel contains the financial year string
