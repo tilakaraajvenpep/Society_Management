@@ -108,7 +108,8 @@ router.get("/upcoming", authorize(["TENANT_ADMIN"]), async (req: any, res) => {
     const now = new Date();
     const endOfThisMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
     
-    const upcomingMembers = await prisma.member.findMany({
+    // Fetch all active members (wide net: overdue paidUntil, null paidUntil, or stored outstanding dues)
+    const candidateMembers = await prisma.member.findMany({
       where: {
         tenantId: req.user.tenantId,
         status: "ACTIVE",
@@ -129,7 +130,7 @@ router.get("/upcoming", authorize(["TENANT_ADMIN"]), async (req: any, res) => {
     });
 
     const enrichedMembers = await Promise.all(
-      upcomingMembers.map(async (m) => {
+      candidateMembers.map(async (m) => {
         const totalDues = await calculateMemberOutstanding(prisma, req.user.tenantId, m.id, m.createdAt);
         const lastPayment = m.payments && m.payments.length > 0 ? m.payments[0] : null;
         return {
@@ -140,12 +141,16 @@ router.get("/upcoming", authorize(["TENANT_ADMIN"]), async (req: any, res) => {
         };
       })
     );
+
+    // Only return members who actually have outstanding dues after dynamic calculation
+    const upcomingMembers = enrichedMembers.filter(m => m.totalDues > 0);
     
-    res.json(enrichedMembers);
+    res.json(upcomingMembers);
   } catch (error: any) {
     res.status(500).json({ message: "Error fetching upcoming dues", error: error.message });
   }
 });
+
 router.patch("/:id", authorize(["TENANT_ADMIN"]), async (req: any, res) => {
   const { status, amount, mode, notes, paymentDate, financialYear, coverageStartDate, coverageEndDate } = req.body;
   try {
