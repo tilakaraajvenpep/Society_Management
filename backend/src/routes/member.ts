@@ -21,6 +21,7 @@ router.get("/profile", authorize(["MEMBER"]), async (req: any, res) => {
           }
         },
         payments: {
+          where: { status: { not: 'CANCELLED' } },
           orderBy: { paymentDate: 'desc' },
           take: 50 // Limit to last 50 receipts
         },
@@ -72,6 +73,7 @@ export async function calculateMemberOutstanding(
   const startFYYear = regDateUTC.getUTCMonth() >= 3 ? regDateUTC.getUTCFullYear() : regDateUTC.getUTCFullYear() - 1;
   const endFYYear = todayUTC.getUTCMonth() >= 3 ? todayUTC.getUTCFullYear() : todayUTC.getUTCFullYear() - 1;
 
+  const billedYears = new Set<string>();
   let totalBilled = 0;
   for (let y = startFYYear; y <= endFYYear; y++) {
     const fyStr = `${y}-${((y + 1) % 100).toString().padStart(2, '0')}`;
@@ -79,6 +81,7 @@ export async function calculateMemberOutstanding(
     if (costRecord) {
       // Only bill for FYs where the admin has explicitly set a fee
       totalBilled += costRecord.amount;
+      billedYears.add(fyStr);
     }
   }
 
@@ -86,7 +89,18 @@ export async function calculateMemberOutstanding(
   const payments = await tx.payment.findMany({
     where: { memberId, tenantId, status: { not: 'CANCELLED' } }
   });
-  const totalPaid = payments.reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
+
+  const totalPaid = payments.reduce((sum: number, p: any) => {
+    let pFY = p.financialYear;
+    if (!pFY) {
+      const pDate = p.paymentDate || p.createdAt || new Date();
+      pFY = getFinancialYearForDate(new Date(pDate));
+    }
+    if (billedYears.has(pFY)) {
+      return sum + (p.amount || 0);
+    }
+    return sum;
+  }, 0);
 
   return Math.max(0, totalBilled - totalPaid);
 }

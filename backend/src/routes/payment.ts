@@ -118,15 +118,25 @@ router.get("/upcoming", authorize(["TENANT_ADMIN"]), async (req: any, res) => {
           { paidUntil: { lte: endOfThisMonth } }
         ]
       },
+      include: {
+        payments: {
+          where: { status: { not: 'CANCELLED' } },
+          orderBy: { paymentDate: 'desc' },
+          take: 1
+        }
+      },
       orderBy: { flatNo: 'asc' }
     });
 
     const enrichedMembers = await Promise.all(
       upcomingMembers.map(async (m) => {
         const totalDues = await calculateMemberOutstanding(prisma, req.user.tenantId, m.id, m.createdAt);
+        const lastPayment = m.payments && m.payments.length > 0 ? m.payments[0] : null;
         return {
           ...m,
-          totalDues
+          payments: undefined,
+          totalDues,
+          lastPaymentDate: lastPayment ? lastPayment.paymentDate : null
         };
       })
     );

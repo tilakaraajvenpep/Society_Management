@@ -2468,7 +2468,7 @@ const TenantAdminDashboard = () => {
                   <tr>
                     <th>FLAT NO</th>
                     <th>MEMBER</th>
-                    <th>PAID UNTIL</th>
+                    <th>PAYMENT DONE DATE</th>
                     <th>OUTSTANDING DUES</th>
                     <th>STATUS</th>
                   </tr>
@@ -2486,7 +2486,7 @@ const TenantAdminDashboard = () => {
                           <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{m.mobile}</div>
                         </td>
                         <td>
-                          {m.paidUntil ? new Date(m.paidUntil).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }) : 'No Record'}
+                          {m.lastPaymentDate ? new Date(m.lastPaymentDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'No Record'}
                         </td>
                         <td>
                           <span style={{ fontWeight: 600, color: hasDues ? 'var(--error)' : 'var(--success)' }}>
