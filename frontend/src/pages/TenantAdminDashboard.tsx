@@ -912,6 +912,26 @@ const TenantAdminDashboard = () => {
     return `${year}-${month}-${day}`;
   };
 
+  const toUTCIsoDate = (dateInput: string | Date | null | undefined) => {
+    if (!dateInput) return '';
+    const d = new Date(dateInput);
+    if (isNaN(d.getTime())) return '';
+    const year = d.getUTCFullYear();
+    const month = (d.getUTCMonth() + 1).toString().padStart(2, '0');
+    const day = d.getUTCDate().toString().padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const formatUTCDate = (dateInput: string | Date | null | undefined) => {
+    if (!dateInput) return '';
+    const d = new Date(dateInput);
+    if (isNaN(d.getTime())) return '';
+    const day = d.getUTCDate().toString().padStart(2, '0');
+    const month = d.toLocaleString('en-IN', { month: 'short', timeZone: 'UTC' });
+    const year = d.getUTCFullYear();
+    return `${day} ${month} ${year}`;
+  };
+
   const [activeTab, setActiveTab] = useState('overview');
   const [reportTab, setReportTab] = useState('pnl');
   const [maintenanceCosts, setMaintenanceCosts] = useState<any[]>([]);
@@ -1017,7 +1037,8 @@ const TenantAdminDashboard = () => {
       </div>
     </div>
   );
-  const [newPayment, setNewPayment] = useState({ memberId: '', amount: 0, mode: 'CASH', notes: '', paidMonths: 1, periodLabel: 'Monthly', coverageStartDate: '', coverageEndDate: '', paymentDate: getTodayString() });
+  const [newPayment, setNewPayment] = useState({ memberId: '', amount: 0, mode: 'CASH', notes: '', paidMonths: 1, periodLabel: 'Monthly', coverageStartDate: '', coverageEndDate: '', paymentDate: getTodayString(), financialYear: '' });
+  const [editingPayment, setEditingPayment] = useState<any>(null);
   const [upcomingMembers, setUpcomingMembers] = useState([]);
   const [newTransfer, setNewTransfer] = useState({ toAdminId: '', amount: 0, type: 'HANDOVER', referenceNote: '' });
   const [auditLogs, setAuditLogs] = useState([]);
@@ -1143,11 +1164,26 @@ const TenantAdminDashboard = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       setShowModal(null);
-      setNewPayment({ memberId: '', amount: 0, mode: 'CASH', notes: '', paidMonths: 1, periodLabel: 'Monthly', coverageStartDate: '', coverageEndDate: '', paymentDate: getTodayString() });
+      setNewPayment({ memberId: '', amount: 0, mode: 'CASH', notes: '', paidMonths: 1, periodLabel: 'Monthly', coverageStartDate: '', coverageEndDate: '', paymentDate: getTodayString(), financialYear: '' });
       fetchData();
       alert('Payment recorded successfully');
     } catch (err: any) {
       alert(err.response?.data?.message || 'Error recording payment');
+    }
+  };
+
+  const handleUpdatePayment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await axios.patch(`/payments/${editingPayment.id}`, editingPayment, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setShowModal(null);
+      setEditingPayment(null);
+      fetchData();
+      alert('Payment updated successfully');
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Error updating payment');
     }
   };
 
@@ -1660,14 +1696,22 @@ const TenantAdminDashboard = () => {
                   {payments.map((p: any) => {
                     const pd = new Date(p.paymentDate);
                     const fyStart = pd.getMonth() >= 3 ? pd.getFullYear() : pd.getFullYear() - 1;
-                    const fy = `${fyStart}-${((fyStart + 1) % 100).toString().padStart(2, '0')}`;
+                    const calculatedFy = `${fyStart}-${((fyStart + 1) % 100).toString().padStart(2, '0')}`;
+                    const fy = p.financialYear || calculatedFy;
                     return (
                     <tr key={p.id}>
                       <td><code style={{ fontSize: '0.8125rem' }}>{p.receiptNumber}</code></td>
                       <td><strong>{p.member?.name}</strong></td>
-                      <td style={{ fontWeight: 600 }}>₹{p.amount.toLocaleString()}</td>
+                      <td style={{ fontWeight: 600 }}>₹{Math.round(p.amount).toLocaleString()}</td>
                       <td><span className={`badge ${p.mode === 'CASH' ? 'badge-warning' : 'badge-success'}`}>{p.mode}</span></td>
-                      <td style={{ fontSize: '0.8125rem' }}>{pd.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
+                      <td style={{ fontSize: '0.8125rem' }}>
+                        <div>{formatUTCDate(p.paymentDate)}</div>
+                        {p.coverageStartDate && p.coverageEndDate && (
+                          <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '0.15rem' }}>
+                            ({formatUTCDate(p.coverageStartDate)} - {formatUTCDate(p.coverageEndDate)})
+                          </div>
+                        )}
+                      </td>
                       <td>
                         <span style={{
                           display: 'inline-block',
@@ -1691,9 +1735,26 @@ const TenantAdminDashboard = () => {
                             <Eye size={16} />
                           </button>
                           {p.status !== 'CANCELLED' && (
-                            <button className="btn btn-secondary" style={{ padding: '0.4rem', color: 'var(--error)' }} onClick={() => handleCancelPayment(p.id)} title="Cancel Payment">
-                              <XCircle size={16} />
-                            </button>
+                            <>
+                              <button className="btn btn-secondary" style={{ padding: '0.4rem' }} onClick={() => { 
+                                setEditingPayment({
+                                  id: p.id,
+                                  amount: p.amount,
+                                  mode: p.mode,
+                                  notes: p.notes || '',
+                                  paymentDate: toUTCIsoDate(p.paymentDate),
+                                  financialYear: p.financialYear || '',
+                                  coverageStartDate: toUTCIsoDate(p.coverageStartDate),
+                                  coverageEndDate: toUTCIsoDate(p.coverageEndDate),
+                                });
+                                setShowModal('editPayment');
+                              }} title="Edit Payment">
+                                <Edit size={16} />
+                              </button>
+                              <button className="btn btn-secondary" style={{ padding: '0.4rem', color: 'var(--error)' }} onClick={() => handleCancelPayment(p.id)} title="Cancel Payment">
+                                <XCircle size={16} />
+                              </button>
+                            </>
                           )}
                         </div>
                       </td>
@@ -1864,11 +1925,11 @@ const TenantAdminDashboard = () => {
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.25rem' }}>
                       <div className="card" style={{ padding: '1.25rem', borderLeft: '4px solid var(--success)', display: 'flex', flexDirection: 'column', gap: '0.35rem', backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderLeftWidth: '4px' }}>
                         <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Income</span>
-                        <span style={{ fontSize: '1.625rem', fontWeight: 700, color: 'var(--success)' }}>₹{totalIncome.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                        <span style={{ fontSize: '1.625rem', fontWeight: 700, color: 'var(--success)' }}>₹{Math.round(totalIncome).toLocaleString()}</span>
                       </div>
                       <div className="card" style={{ padding: '1.25rem', borderLeft: '4px solid var(--error)', display: 'flex', flexDirection: 'column', gap: '0.35rem', backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderLeftWidth: '4px' }}>
                         <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Expenditure</span>
-                        <span style={{ fontSize: '1.625rem', fontWeight: 700, color: 'var(--error)' }}>₹{totalExpenses.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                        <span style={{ fontSize: '1.625rem', fontWeight: 700, color: 'var(--error)' }}>₹{Math.round(totalExpenses).toLocaleString()}</span>
                       </div>
                       <div className="card" style={{ 
                         padding: '1.25rem', 
@@ -1882,7 +1943,7 @@ const TenantAdminDashboard = () => {
                       }}>
                         <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Net Surplus / Deficit</span>
                         <span style={{ fontSize: '1.625rem', fontWeight: 700, color: netProfit >= 0 ? 'var(--success)' : 'var(--error)' }}>
-                          ₹{Math.abs(netProfit).toLocaleString(undefined, {minimumFractionDigits: 2})}
+                          ₹{Math.round(Math.abs(netProfit)).toLocaleString()}
                           <span style={{ fontSize: '0.75rem', fontWeight: 500, marginLeft: '0.5rem', verticalAlign: 'middle', color: 'var(--text-secondary)' }}>
                             ({netProfit >= 0 ? 'Surplus' : 'Deficit'})
                           </span>
@@ -1948,9 +2009,9 @@ const TenantAdminDashboard = () => {
                                       ) : ''}
                                     </td>
                                     <td style={{ padding: '0.85rem 1.25rem', textAlign: 'right', fontSize: '0.875rem', fontWeight: exp?.isSurplus ? 700 : 500, color: exp?.isSurplus ? 'var(--success)' : 'var(--text-primary)', borderRight: '2px solid var(--border-color)', whiteSpace: 'nowrap' }}>
-                                      {exp ? exp.amount.toLocaleString(undefined, {minimumFractionDigits: 2}) : ''}
+                                      {exp ? Math.round(exp.amount).toLocaleString() : ''}
                                     </td>
-
+ 
                                     {/* Income (Credit) Column */}
                                     <td style={{ padding: '0.85rem 1.25rem', fontSize: '0.875rem', color: inc?.isDeficit ? 'var(--error)' : 'var(--text-primary)' }}>
                                       {inc ? (
@@ -1964,7 +2025,7 @@ const TenantAdminDashboard = () => {
                                       ) : ''}
                                     </td>
                                     <td style={{ padding: '0.85rem 1.25rem', textAlign: 'right', fontSize: '0.875rem', fontWeight: inc?.isDeficit ? 700 : 500, color: inc?.isDeficit ? 'var(--error)' : 'var(--text-primary)', whiteSpace: 'nowrap' }}>
-                                      {inc ? inc.amount.toLocaleString(undefined, {minimumFractionDigits: 2}) : ''}
+                                      {inc ? Math.round(inc.amount).toLocaleString() : ''}
                                     </td>
                                   </tr>
                                 );
@@ -1974,9 +2035,9 @@ const TenantAdminDashboard = () => {
                           <tfoot>
                             <tr style={{ backgroundColor: 'var(--bg-secondary)', fontWeight: 700, borderTop: '2px solid var(--border-color)', borderBottom: '3px double var(--border-color)' }}>
                               <td style={{ padding: '1rem 1.25rem', fontSize: '0.875rem', color: 'var(--text-primary)' }}>Total</td>
-                              <td style={{ padding: '1rem 1.25rem', textAlign: 'right', fontSize: '0.875rem', color: 'var(--text-primary)', borderRight: '2px solid var(--border-color)' }}>{pnlTotal.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                              <td style={{ padding: '1rem 1.25rem', textAlign: 'right', fontSize: '0.875rem', color: 'var(--text-primary)', borderRight: '2px solid var(--border-color)' }}>{Math.round(pnlTotal).toLocaleString()}</td>
                               <td style={{ padding: '1rem 1.25rem', fontSize: '0.875rem', color: 'var(--text-primary)' }}>Total</td>
-                              <td style={{ padding: '1rem 1.25rem', textAlign: 'right', fontSize: '0.875rem', color: 'var(--text-primary)' }}>{pnlTotal.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                              <td style={{ padding: '1rem 1.25rem', textAlign: 'right', fontSize: '0.875rem', color: 'var(--text-primary)' }}>{Math.round(pnlTotal).toLocaleString()}</td>
                             </tr>
                           </tfoot>
                         </table>
@@ -2058,7 +2119,7 @@ const TenantAdminDashboard = () => {
                                       ) : ''}
                                     </td>
                                     <td style={{ padding: '0.85rem 1.25rem', textAlign: 'right', fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-primary)', borderRight: '2px solid var(--border-color)', whiteSpace: 'nowrap' }}>
-                                      {liab && !liab.isHeader ? liab.amount.toLocaleString(undefined, {minimumFractionDigits: 2}) : ''}
+                                      {liab && !liab.isHeader ? Math.round(liab.amount).toLocaleString() : ''}
                                     </td>
 
                                     {/* Assets Side */}
@@ -2072,7 +2133,7 @@ const TenantAdminDashboard = () => {
                                       ) : ''}
                                     </td>
                                     <td style={{ padding: '0.85rem 1.25rem', textAlign: 'right', fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
-                                      {asset && !asset.isHeader ? asset.amount.toLocaleString(undefined, {minimumFractionDigits: 2}) : ''}
+                                      {asset && !asset.isHeader ? Math.round(asset.amount).toLocaleString() : ''}
                                     </td>
                                   </tr>
                                 );
@@ -2082,9 +2143,9 @@ const TenantAdminDashboard = () => {
                           <tfoot>
                             <tr style={{ backgroundColor: 'var(--bg-secondary)', fontWeight: 700, borderTop: '2px solid var(--border-color)', borderBottom: '3px double var(--border-color)' }}>
                               <td style={{ padding: '1rem 1.25rem', fontSize: '0.875rem', color: 'var(--text-primary)' }}>Total</td>
-                              <td style={{ padding: '1rem 1.25rem', textAlign: 'right', fontSize: '0.875rem', color: 'var(--text-primary)', borderRight: '2px solid var(--border-color)' }}>{bsTotal.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                              <td style={{ padding: '1rem 1.25rem', textAlign: 'right', fontSize: '0.875rem', color: 'var(--text-primary)', borderRight: '2px solid var(--border-color)' }}>{Math.round(bsTotal).toLocaleString()}</td>
                               <td style={{ padding: '1rem 1.25rem', fontSize: '0.875rem', color: 'var(--text-primary)' }}>Total</td>
-                              <td style={{ padding: '1rem 1.25rem', textAlign: 'right', fontSize: '0.875rem', color: 'var(--text-primary)' }}>{bsTotal.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                              <td style={{ padding: '1rem 1.25rem', textAlign: 'right', fontSize: '0.875rem', color: 'var(--text-primary)' }}>{Math.round(bsTotal).toLocaleString()}</td>
                             </tr>
                           </tfoot>
                         </table>
@@ -2800,7 +2861,7 @@ const TenantAdminDashboard = () => {
                             <tr key={p.id}>
                               <td><code style={{ fontSize: '0.8125rem' }}>{p.receiptNumber}</code></td>
                               <td style={{ fontSize: '0.875rem' }}>{new Date(p.paymentDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
-                              <td style={{ fontWeight: 600 }}>₹{p.amount.toLocaleString()}</td>
+                              <td style={{ fontWeight: 600 }}>₹{Math.round(p.amount).toLocaleString()}</td>
                               <td><span className={`badge ${p.mode === 'CASH' ? 'badge-warning' : 'badge-success'}`}>{p.mode}</span></td>
                               <td><span className={`badge ${p.status === 'PAID' ? 'badge-success' : 'badge-error'}`}>{p.status}</span></td>
                               <td style={{ textAlign: 'right' }}>
@@ -2877,13 +2938,25 @@ const TenantAdminDashboard = () => {
                   </div>
 
                   <div style={{ backgroundColor: '#f8fafc', padding: '1.5rem', borderRadius: '0.75rem', marginBottom: '2rem' }}>
+                    {selectedPayment.financialYear && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                        <span style={{ color: '#64748b' }}>Financial Year</span>
+                        <span style={{ fontWeight: 600 }}>{selectedPayment.financialYear}</span>
+                      </div>
+                    )}
+                    {selectedPayment.coverageStartDate && selectedPayment.coverageEndDate && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                        <span style={{ color: '#64748b' }}>Coverage Period</span>
+                        <span style={{ fontWeight: 600 }}>{formatUTCDate(selectedPayment.coverageStartDate)} - {formatUTCDate(selectedPayment.coverageEndDate)}</span>
+                      </div>
+                    )}
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
                       <span style={{ color: '#64748b' }}>Payment Mode</span>
                       <span style={{ fontWeight: 600 }}>{selectedPayment.mode}</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '1rem', borderTop: '1px solid #e2e8f0' }}>
                       <span style={{ fontSize: '1.125rem', fontWeight: 700 }}>Total Amount</span>
-                      <span style={{ fontSize: '1.5rem', fontWeight: 800, color: '#3b82f6' }}>₹{selectedPayment.amount.toLocaleString()}</span>
+                      <span style={{ fontSize: '1.5rem', fontWeight: 800, color: '#3b82f6' }}>₹{Math.round(selectedPayment.amount).toLocaleString()}</span>
                     </div>
                   </div>
 
@@ -3045,7 +3118,7 @@ const TenantAdminDashboard = () => {
                       }}>
                         <option value="">-- Choose Member --</option>
                         {members.map((m: any) => (
-                          <option key={m.id} value={m.id}>{m.flatNo} - {m.name} (Due: ₹{m.totalDues !== undefined ? m.totalDues : m.outstandingDues})</option>
+                          <option key={m.id} value={m.id}>{m.flatNo} - {m.name} (Due: ₹{Math.round(m.totalDues !== undefined ? m.totalDues : m.outstandingDues)})</option>
                         ))}
                       </select>
                     </div>
@@ -3091,17 +3164,28 @@ const TenantAdminDashboard = () => {
                     </div>
                     <div className="grid-2">
                       <div>
+                        <label style={{ fontSize: '0.875rem', fontWeight: 500, marginBottom: '0.4rem', display: 'block' }}>Financial Year</label>
+                        <select required value={newPayment.financialYear} onChange={(e) => setNewPayment({ ...newPayment, financialYear: e.target.value })}>
+                          <option value="">-- Select FY --</option>
+                          {maintenanceCosts.map((c: any) => (
+                            <option key={c.id} value={c.financialYear}>{c.financialYear}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
                         <label style={{ fontSize: '0.875rem', fontWeight: 500, marginBottom: '0.4rem', display: 'block' }}>Payment Date</label>
                         <input type="date" required value={newPayment.paymentDate} onChange={(e) => setNewPayment({ ...newPayment, paymentDate: e.target.value })} />
                       </div>
+                    </div>
+                    <div className="grid-2">
                       <div>
-                        <label style={{ fontSize: '0.875rem', fontWeight: 500, marginBottom: '0.4rem', display: 'block' }}>Amount Received (₹) <span style={{fontSize: '0.75rem', color: 'var(--text-secondary)'}}>(Base: ₹{summary.maintenanceAmount || 0})</span></label>
+                        <label style={{ fontSize: '0.875rem', fontWeight: 500, marginBottom: '0.4rem', display: 'block' }}>Amount Received (₹) <span style={{fontSize: '0.75rem', color: 'var(--text-secondary)'}}>(Base: ₹{Math.round(summary.maintenanceAmount || 0)})</span></label>
                         <input type="number" required value={newPayment.amount} onChange={(e) => setNewPayment({ ...newPayment, amount: parseFloat(e.target.value) || 0 })} />
                       </div>
-                    </div>
-                    <div>
-                      <label style={{ fontSize: '0.875rem', fontWeight: 500, marginBottom: '0.4rem', display: 'block' }}>Reference / Notes</label>
-                      <input type="text" placeholder="e.g. Receipt No, Transaction ID" value={newPayment.notes} onChange={(e) => setNewPayment({ ...newPayment, notes: e.target.value })} style={{ width: '100%', padding: '0.625rem 0.875rem', backgroundColor: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', borderRadius: '0.5rem', color: 'var(--text-primary)' }} />
+                      <div>
+                        <label style={{ fontSize: '0.875rem', fontWeight: 500, marginBottom: '0.4rem', display: 'block' }}>Reference / Notes</label>
+                        <input type="text" placeholder="e.g. Receipt No, Transaction ID" value={newPayment.notes} onChange={(e) => setNewPayment({ ...newPayment, notes: e.target.value })} style={{ width: '100%', padding: '0.625rem 0.875rem', backgroundColor: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', borderRadius: '0.5rem', color: 'var(--text-primary)' }} />
+                      </div>
                     </div>
                     <div className="grid-2" style={{ backgroundColor: 'var(--bg-secondary)', padding: '1rem', borderRadius: '0.5rem', border: '1px dashed var(--border-color)' }}>
                       <div style={{ gridColumn: 'span 2' }}>
@@ -3133,6 +3217,70 @@ const TenantAdminDashboard = () => {
                   <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', paddingTop: '1rem', borderTop: '1px solid var(--border-color)' }}>
                     <button type="button" className="btn btn-secondary" onClick={() => setShowModal(null)}>Cancel</button>
                     <button type="submit" className="btn btn-primary">Record Payment</button>
+                  </div>
+                </form>
+              </>
+            )}
+
+            {showModal === 'editPayment' && editingPayment && (
+              <>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                  <h2 style={{ fontSize: '1.25rem' }}>Edit Maintenance Payment</h2>
+                  <button onClick={() => setShowModal(null)} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: 'var(--text-secondary)' }}>&times;</button>
+                </div>
+                <form onSubmit={handleUpdatePayment}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem' }}>
+                    <div className="grid-2">
+                      <div>
+                        <label style={{ fontSize: '0.875rem', fontWeight: 500, marginBottom: '0.4rem', display: 'block' }}>Payment Mode</label>
+                        <select value={editingPayment.mode} onChange={(e) => setEditingPayment({ ...editingPayment, mode: e.target.value })}>
+                          <option value="CASH">Cash</option>
+                          <option value="BANK_TRANSFER">Bank Transfer</option>
+                          <option value="UPI">UPI / QR</option>
+                          <option value="CHEQUE">Cheque</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label style={{ fontSize: '0.875rem', fontWeight: 500, marginBottom: '0.4rem', display: 'block' }}>Financial Year</label>
+                        <select required value={editingPayment.financialYear} onChange={(e) => setEditingPayment({ ...editingPayment, financialYear: e.target.value })}>
+                          <option value="">-- Select FY --</option>
+                          {maintenanceCosts.map((c: any) => (
+                            <option key={c.id} value={c.financialYear}>{c.financialYear}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                    <div className="grid-2">
+                      <div>
+                        <label style={{ fontSize: '0.875rem', fontWeight: 500, marginBottom: '0.4rem', display: 'block' }}>Payment Date</label>
+                        <input type="date" required value={editingPayment.paymentDate} onChange={(e) => setEditingPayment({ ...editingPayment, paymentDate: e.target.value })} />
+                      </div>
+                      <div>
+                        <label style={{ fontSize: '0.875rem', fontWeight: 500, marginBottom: '0.4rem', display: 'block' }}>Amount Received (₹)</label>
+                        <input type="number" required value={editingPayment.amount} onChange={(e) => setEditingPayment({ ...editingPayment, amount: parseFloat(e.target.value) || 0 })} />
+                      </div>
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '0.875rem', fontWeight: 500, marginBottom: '0.4rem', display: 'block' }}>Reference / Notes</label>
+                      <input type="text" placeholder="e.g. Reference No / notes" value={editingPayment.notes} onChange={(e) => setEditingPayment({ ...editingPayment, notes: e.target.value })} style={{ width: '100%', padding: '0.625rem 0.875rem', backgroundColor: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', borderRadius: '0.5rem', color: 'var(--text-primary)' }} />
+                    </div>
+                    <div className="grid-2" style={{ backgroundColor: 'var(--bg-secondary)', padding: '1rem', borderRadius: '0.5rem', border: '1px dashed var(--border-color)' }}>
+                      <div style={{ gridColumn: 'span 2' }}>
+                        <h4 style={{ fontSize: '0.875rem', marginBottom: '0.2rem', color: 'var(--primary)' }}>Advanced: Custom Coverage Dates</h4>
+                      </div>
+                      <div>
+                        <label style={{ fontSize: '0.875rem', fontWeight: 500, marginBottom: '0.4rem', display: 'block' }}>Coverage Start (Optional)</label>
+                        <input type="date" value={editingPayment.coverageStartDate || ''} onChange={(e) => setEditingPayment({ ...editingPayment, coverageStartDate: e.target.value })} />
+                      </div>
+                      <div>
+                        <label style={{ fontSize: '0.875rem', fontWeight: 500, marginBottom: '0.4rem', display: 'block' }}>Coverage End (Optional)</label>
+                        <input type="date" value={editingPayment.coverageEndDate || ''} onChange={(e) => setEditingPayment({ ...editingPayment, coverageEndDate: e.target.value })} />
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', paddingTop: '1rem', borderTop: '1px solid var(--border-color)' }}>
+                    <button type="button" className="btn btn-secondary" onClick={() => setShowModal(null)}>Cancel</button>
+                    <button type="submit" className="btn btn-primary">Save Changes</button>
                   </div>
                 </form>
               </>

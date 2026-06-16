@@ -126,6 +126,7 @@ model Payment {
   receiptNumber     String?
   paidMonths        Int            @default(1)
   periodLabel       String?
+  financialYear     String?
   coverageEndDate   DateTime?
   coverageStartDate DateTime?
   

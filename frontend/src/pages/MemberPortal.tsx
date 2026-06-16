@@ -295,10 +295,17 @@ const MemberPayments = ({ memberInfo, user }: { memberInfo: any, user: any }) =>
               <tbody>
                 {memberInfo.payments.map((p: any) => (
                   <tr key={p.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
-                    <td style={{ padding: '1rem', fontSize: '0.875rem' }}>{new Date(p.paymentDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
+                    <td style={{ padding: '1rem', fontSize: '0.875rem' }}>
+                      <div>{formatUTCDate(p.paymentDate)}</div>
+                      {p.coverageStartDate && p.coverageEndDate && (
+                        <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '0.15rem' }}>
+                          ({formatUTCDate(p.coverageStartDate)} - {formatUTCDate(p.coverageEndDate)})
+                        </div>
+                      )}
+                    </td>
                     <td style={{ padding: '1rem', fontSize: '0.875rem', fontWeight: 600 }}>{p.receiptNumber || `RCP-${p.id.slice(-6).toUpperCase()}`}</td>
                     <td style={{ padding: '1rem', fontSize: '0.875rem' }}>{p.periodLabel || `${p.paidMonths} Month(s)`}</td>
-                    <td style={{ padding: '1rem', fontSize: '0.875rem', fontWeight: 700 }}>₹{p.amount.toLocaleString()}</td>
+                    <td style={{ padding: '1rem', fontSize: '0.875rem', fontWeight: 700 }}>₹{Math.round(p.amount).toLocaleString()}</td>
                     <td style={{ padding: '1rem' }}>
                       <button className="btn btn-secondary" style={{ padding: '0.4rem 0.75rem', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }} onClick={() => viewReceipt(p)}>
                         <FileText size={14} /> View Receipt
@@ -354,6 +361,18 @@ const MemberPayments = ({ memberInfo, user }: { memberInfo: any, user: any }) =>
               </div>
 
               <div style={{ backgroundColor: '#f8fafc', padding: '1.5rem', borderRadius: '0.75rem', marginBottom: '2rem' }}>
+                {selectedPayment.financialYear && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                    <span style={{ color: '#64748b' }}>Financial Year</span>
+                    <span style={{ fontWeight: 600 }}>{selectedPayment.financialYear}</span>
+                  </div>
+                )}
+                {selectedPayment.coverageStartDate && selectedPayment.coverageEndDate && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                    <span style={{ color: '#64748b' }}>Coverage Period</span>
+                    <span style={{ fontWeight: 600 }}>{formatUTCDate(selectedPayment.coverageStartDate)} - {formatUTCDate(selectedPayment.coverageEndDate)}</span>
+                  </div>
+                )}
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
                   <span style={{ color: '#64748b' }}>Payment Period</span>
                   <span style={{ fontWeight: 600 }}>{selectedPayment.periodLabel || `${selectedPayment.paidMonths} Month(s)`}</span>
@@ -364,7 +383,7 @@ const MemberPayments = ({ memberInfo, user }: { memberInfo: any, user: any }) =>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '1rem', borderTop: '1px solid #e2e8f0' }}>
                   <span style={{ fontSize: '1.125rem', fontWeight: 700 }}>Total Amount</span>
-                  <span style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--primary)' }}>₹{selectedPayment.amount.toLocaleString()}</span>
+                  <span style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--primary)' }}>₹{Math.round(selectedPayment.amount).toLocaleString()}</span>
                 </div>
               </div>
 
@@ -384,6 +403,16 @@ const MemberPayments = ({ memberInfo, user }: { memberInfo: any, user: any }) =>
       )}
     </div>
   );
+};
+
+const formatUTCDate = (dateInput: string | Date | null | undefined) => {
+  if (!dateInput) return '';
+  const d = new Date(dateInput);
+  if (isNaN(d.getTime())) return '';
+  const day = d.getUTCDate().toString().padStart(2, '0');
+  const month = d.toLocaleString('en-IN', { month: 'short', timeZone: 'UTC' });
+  const year = d.getUTCFullYear();
+  return `${day} ${month} ${year}`;
 };
 
 const MemberPortal = () => {
