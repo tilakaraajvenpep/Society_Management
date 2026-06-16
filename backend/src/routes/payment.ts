@@ -10,7 +10,7 @@ router.post("/", authorize(["TENANT_ADMIN"]), async (req: any, res) => {
   const { memberId, amount, mode, notes, subscriptionId, paidMonths, periodLabel, coverageStartDate, coverageEndDate, paymentDate } = req.body;
   try {
     // Fetch member name and current paidUntil
-    const currentMember = await prisma.member.findUnique({ where: { id: memberId }, select: { name: true, flatNo: true, paidUntil: true } });
+    const currentMember = await prisma.member.findUnique({ where: { id: memberId }, select: { name: true, flatNo: true, paidUntil: true, outstandingDues: true } });
     const memberLabel = currentMember ? `${currentMember.name} (Flat ${currentMember.flatNo})` : memberId;
 
     const payment = await prisma.$transaction(async (tx) => {
@@ -65,11 +65,14 @@ router.post("/", authorize(["TENANT_ADMIN"]), async (req: any, res) => {
         newPaidUntil.setMonth(newPaidUntil.getMonth() + monthsToAdd);
       }
 
-      // Decrease member's outstandingDues and update paidUntil
+      // Decrease member's outstandingDues (up to 0) and update paidUntil
+      const memberDues = currentMember?.outstandingDues || 0;
+      const decrementAmount = Math.min(memberDues, parseFloat(amount.toString()));
+
       await tx.member.update({
         where: { id: memberId },
         data: { 
-          outstandingDues: { decrement: parseFloat(amount.toString()) },
+          outstandingDues: { decrement: decrementAmount },
           paidUntil: newPaidUntil
         }
       });

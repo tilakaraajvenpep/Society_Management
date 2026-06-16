@@ -97,6 +97,37 @@ router.post("/", authorize(["TENANT_ADMIN"]), async (req: any, res) => {
         userId = user.id;
       }
 
+      // Fetch tenant's maintenanceAmount to calculate unpaid dues from active date
+      const tenant = await tx.tenant.findUnique({
+        where: { id: req.user.tenantId }
+      });
+      const maintenanceAmount = tenant?.maintenanceAmount || 0;
+
+      let additionalDues = 0;
+      if (paidUntil) {
+        const [year, month, day] = paidUntil.split('-').map(Number);
+        const activeDate = new Date(Date.UTC(year, month - 1, day));
+        const today = new Date();
+        const todayUTC = new Date(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()));
+
+        if (activeDate < todayUTC) {
+          const yearsDiff = todayUTC.getUTCFullYear() - activeDate.getUTCFullYear();
+          const monthsDiff = todayUTC.getUTCMonth() - activeDate.getUTCMonth();
+          let totalMonths = yearsDiff * 12 + monthsDiff;
+          
+          if (todayUTC.getUTCDate() >= activeDate.getUTCDate()) {
+            totalMonths += 1;
+          }
+          
+          if (totalMonths > 0) {
+            additionalDues = totalMonths * maintenanceAmount;
+          }
+        }
+      }
+
+      const inputDues = outstandingDues ? parseFloat(outstandingDues.toString()) : 0;
+      const totalOutstandingDues = inputDues + additionalDues;
+
       const member = await tx.member.create({
         data: {
           name,
@@ -104,7 +135,7 @@ router.post("/", authorize(["TENANT_ADMIN"]), async (req: any, res) => {
           mobile,
           flatNo,
           address,
-          outstandingDues: outstandingDues ? parseFloat(outstandingDues.toString()) : 0,
+          outstandingDues: totalOutstandingDues,
           tenantId: req.user.tenantId,
           userId,
           defaultTenure: defaultTenure || "MONTHLY",
