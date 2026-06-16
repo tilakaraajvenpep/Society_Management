@@ -486,30 +486,19 @@ const MemberPortal = () => {
           const configuredCost = memberInfo?.tenant?.maintenanceCosts?.find((c: any) => c.financialYear === fyStr);
           if (!configuredCost) return false;
           
-          // 1. First check payment history whether a payment has been received in the member name for that year
-          if (memberInfo?.payments && memberInfo.payments.length > 0) {
-            // Check if any payment's financialYear matches the financial year string
-            const hasMatchingFY = memberInfo.payments.some((p: any) => {
-              return p.financialYear === fyStr;
-            });
-            if (hasMatchingFY) return true;
+          // Only return Paid if an explicit payment record exists for that financial year
+          if (!memberInfo?.payments || memberInfo.payments.length === 0) return false;
 
-            // Check if any payment's periodLabel contains the financial year string
-            const hasMatchingLabel = memberInfo.payments.some((p: any) => {
-              if (!p.periodLabel) return false;
-              return p.periodLabel.toLowerCase().includes(fyStr.toLowerCase());
-            });
-            if (hasMatchingLabel) return true;
+          // Check if any payment's financialYear field matches exactly
+          const hasMatchingFY = memberInfo.payments.some((p: any) => p.financialYear === fyStr);
+          if (hasMatchingFY) return true;
 
-          }
-
-          // 2. Fallback to paidUntil date logic
-          if (memberInfo?.paidUntil) {
-            const paidUntilDate = new Date(memberInfo.paidUntil);
-            const paidUntilUTC = new Date(Date.UTC(paidUntilDate.getUTCFullYear(), paidUntilDate.getUTCMonth(), paidUntilDate.getUTCDate()));
-            const targetEndDate = new Date(Date.UTC(startYear + 1, 2, 31)); // March 31 of target end year
-            if (paidUntilUTC >= targetEndDate) return true;
-          }
+          // Check if any payment's periodLabel contains the financial year string
+          const hasMatchingLabel = memberInfo.payments.some((p: any) => {
+            if (!p.periodLabel) return false;
+            return p.periodLabel.toLowerCase().includes(fyStr.toLowerCase());
+          });
+          if (hasMatchingLabel) return true;
 
           return false;
         };
