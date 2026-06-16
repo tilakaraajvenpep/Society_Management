@@ -12,8 +12,20 @@ const prisma = new PrismaClient({ adapter });
 
 async function main() {
   try {
-    const tenants = await prisma.tenant.findMany();
-    console.log("Tenants:", tenants.map(t => ({ id: t.id, name: t.name, slug: t.slug, enableForums: t.enableForums })));
+    const tenants = await prisma.tenant.findMany({
+      include: {
+        maintenanceCosts: true
+      }
+    });
+    console.log("TENANTS AND COSTS:");
+    console.log(JSON.stringify(tenants, null, 2));
+
+    const members = await prisma.member.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 5
+    });
+    console.log("RECENT MEMBERS:");
+    console.log(JSON.stringify(members, null, 2));
   } catch (err) {
     console.error("Error in check-data:", err);
   }
