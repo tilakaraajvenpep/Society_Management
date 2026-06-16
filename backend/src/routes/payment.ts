@@ -108,16 +108,11 @@ router.get("/upcoming", authorize(["TENANT_ADMIN"]), async (req: any, res) => {
     const now = new Date();
     const endOfThisMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
     
-    // Fetch all active members (wide net: overdue paidUntil, null paidUntil, or stored outstanding dues)
-    const candidateMembers = await prisma.member.findMany({
+    // Fetch all active members for this tenant
+    const activeMembers = await prisma.member.findMany({
       where: {
         tenantId: req.user.tenantId,
-        status: "ACTIVE",
-        OR: [
-          { outstandingDues: { gt: 0 } },
-          { paidUntil: null },
-          { paidUntil: { lte: endOfThisMonth } }
-        ]
+        status: "ACTIVE"
       },
       include: {
         payments: {
@@ -130,7 +125,7 @@ router.get("/upcoming", authorize(["TENANT_ADMIN"]), async (req: any, res) => {
     });
 
     const enrichedMembers = await Promise.all(
-      candidateMembers.map(async (m) => {
+      activeMembers.map(async (m) => {
         const totalDues = await calculateMemberOutstanding(prisma, req.user.tenantId, m.id, m.createdAt);
         const lastPayment = m.payments && m.payments.length > 0 ? m.payments[0] : null;
         return {
@@ -142,8 +137,12 @@ router.get("/upcoming", authorize(["TENANT_ADMIN"]), async (req: any, res) => {
       })
     );
 
-    // Only return members who actually have outstanding dues after dynamic calculation
-    const upcomingMembers = enrichedMembers.filter(m => m.totalDues > 0);
+    // Return members who have computed dues or whose paidUntil is due/overdue
+    const upcomingMembers = enrichedMembers.filter(m => {
+      const hasDues = m.totalDues > 0;
+      const isDueSoon = !m.paidUntil || new Date(m.paidUntil) <= endOfThisMonth;
+      return hasDues || isDueSoon;
+    });
     
     res.json(upcomingMembers);
   } catch (error: any) {
