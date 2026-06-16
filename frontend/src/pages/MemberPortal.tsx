@@ -392,6 +392,7 @@ const MemberPortal = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [memberInfo, setMemberInfo] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [visibleStartYear, setVisibleStartYear] = useState(2022);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -412,36 +413,39 @@ const MemberPortal = () => {
   const renderContent = () => {
     switch (activeTab) {
       case 'overview': {
-        const getFinancialYearFromDate = (dateStr: string) => {
-          const d = new Date(dateStr);
-          const yr = d.getFullYear();
-          const m = d.getMonth();
-          return m >= 3 ? yr : yr - 1; // starts in April
-        };
+
 
         const now = new Date();
         const currentStartYear = now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1;
         const currentFY = `${currentStartYear}-${((currentStartYear + 1) % 100).toString().padStart(2, '0')}`;
-        const nextFY = `${currentStartYear + 1}-${((currentStartYear + 2) % 100).toString().padStart(2, '0')}`;
-
-        const regStartYear = memberInfo?.createdAt ? getFinancialYearFromDate(memberInfo.createdAt) : currentStartYear;
-
         const currentYearCost = memberInfo?.tenant?.maintenanceCosts?.find((c: any) => c.financialYear === currentFY)?.amount;
+        // Construct visibleYears for history table showing 5 years based on visibleStartYear
+        const visibleYears = Array.from({ length: 5 }).map((_, idx) => {
+          const startYr = visibleStartYear + idx;
+          const fyStr = `${startYr}-${((startYr + 1) % 100).toString().padStart(2, '0')}`;
+          
+          const configuredCost = memberInfo?.tenant?.maintenanceCosts?.find((c: any) => c.financialYear === fyStr);
+          const amount = configuredCost ? configuredCost.amount : ((memberInfo?.tenant?.maintenanceAmount || 0) * 12);
+          
+          return {
+            id: configuredCost?.id || fyStr,
+            financialYear: fyStr,
+            amount: amount,
+            startYear: startYr
+          };
+        });
 
-        // Construct yearsList for history table showing only assigned/configured costs from their registration year
-        const yearsList: { id: string; financialYear: string; amount: number; isCustom: boolean }[] = 
-          (memberInfo?.tenant?.maintenanceCosts || [])
-            .filter((c: any) => {
-              const fyStartYear = parseInt(c.financialYear.split('-')[0]);
-              return fyStartYear >= regStartYear;
-            })
-            .map((c: any) => ({
-              id: c.id,
-              financialYear: c.financialYear,
-              amount: c.amount,
-              isCustom: true
-            }))
-            .sort((a: any, b: any) => a.financialYear.localeCompare(b.financialYear));
+        const isYearPaid = (startYear: number) => {
+          if (!memberInfo?.paidUntil) return false;
+          const paidUntilDate = new Date(memberInfo.paidUntil);
+          const paidYear = paidUntilDate.getUTCFullYear();
+          const paidMonth = paidUntilDate.getUTCMonth(); // 0-11
+          
+          const targetYear = startYear + 1;
+          if (paidYear > targetYear) return true;
+          if (paidYear === targetYear && paidMonth >= 2) return true;
+          return false;
+        };
 
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -522,35 +526,52 @@ const MemberPortal = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {yearsList.length === 0 ? (
-                      <tr>
-                        <td colSpan={3} style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '2rem' }}>
-                          No maintenance costs configured per financial year yet.
-                        </td>
-                      </tr>
-                    ) : (
-                      yearsList.map((c) => {
-                        const isCurrent = c.financialYear === currentFY;
-                        const isNext = c.financialYear === nextFY;
-                        return (
-                          <tr key={c.id} style={{ borderBottom: '1px solid var(--border-color)', backgroundColor: isCurrent ? 'var(--bg-tertiary)' : 'transparent' }}>
-                            <td style={{ padding: '0.75rem', fontSize: '0.875rem' }}>
-                              <strong>{c.financialYear}</strong>
-                            </td>
-                            <td style={{ padding: '0.75rem', fontSize: '0.875rem', fontWeight: 600 }}>
-                              ₹{c.amount.toLocaleString()}/year
-                            </td>
-                            <td style={{ padding: '0.75rem', fontSize: '0.825rem', textAlign: 'right' }}>
-                              {isCurrent && <span className="badge badge-success">Current Year</span>}
-                              {isNext && <span className="badge" style={{ backgroundColor: 'var(--primary)', color: 'white' }}>Next Year</span>}
-                              {!isCurrent && !isNext && <span className="badge" style={{ backgroundColor: 'var(--border-color)', color: 'var(--text-secondary)' }}>Historical</span>}
-                            </td>
-                          </tr>
-                        );
-                      })
-                    )}
+                    {visibleYears.map((c) => {
+                      const isCurrent = c.financialYear === currentFY;
+                      const paid = isYearPaid(c.startYear);
+                      return (
+                        <tr key={c.id} style={{ borderBottom: '1px solid var(--border-color)', backgroundColor: isCurrent ? 'var(--bg-tertiary)' : 'transparent' }}>
+                          <td style={{ padding: '0.75rem', fontSize: '0.875rem' }}>
+                            <strong>{c.financialYear}</strong>
+                            {isCurrent && <span style={{ marginLeft: '0.5rem', fontSize: '0.7rem', color: 'var(--primary)', backgroundColor: 'rgba(37, 99, 235, 0.1)', padding: '0.1rem 0.4rem', borderRadius: '0.25rem', fontWeight: 600 }}>Current</span>}
+                          </td>
+                          <td style={{ padding: '0.75rem', fontSize: '0.875rem', fontWeight: 600 }}>
+                            ₹{c.amount.toLocaleString()}/year
+                          </td>
+                          <td style={{ padding: '0.75rem', fontSize: '0.825rem', textAlign: 'right' }}>
+                            {paid ? (
+                              <span className="badge badge-success" style={{ backgroundColor: '#10b981', color: 'white', fontWeight: 600 }}>Paid</span>
+                            ) : (
+                              <span className="badge" style={{ backgroundColor: '#ef4444', color: 'white', fontWeight: 600 }}>Due</span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--border-color)' }}>
+                <button 
+                  type="button"
+                  className="btn btn-secondary" 
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', padding: '0.4rem 0.8rem', fontSize: '0.8rem' }} 
+                  onClick={() => setVisibleStartYear(prev => prev - 5)}
+                >
+                  &larr; Previous 5 Years
+                </button>
+                <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                  Years {visibleStartYear} to {visibleStartYear + 4}
+                </span>
+                <button 
+                  type="button"
+                  className="btn btn-secondary" 
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', padding: '0.4rem 0.8rem', fontSize: '0.8rem' }} 
+                  onClick={() => setVisibleStartYear(prev => prev + 5)}
+                >
+                  Next 5 Years &rarr;
+                </button>
               </div>
             </div>
 
