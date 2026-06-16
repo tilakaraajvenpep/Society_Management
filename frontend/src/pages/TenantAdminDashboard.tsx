@@ -3172,33 +3172,13 @@ const TenantAdminDashboard = () => {
                     </div>
                     <div className="grid-2">
                       <div>
-                        <label style={{ fontSize: '0.875rem', fontWeight: 500, marginBottom: '0.5rem', display: 'block' }}>Financial Year</label>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.25rem' }}>
-                          {['2020-21', '2021-22', '2022-23', '2023-24', '2024-25', '2025-26', '2026-27'].map((fy: string) => {
-                            const isSelected = newPayment.financialYear === fy;
-                            return (
-                              <button
-                                key={fy}
-                                type="button"
-                                onClick={() => setNewPayment({ ...newPayment, financialYear: fy })}
-                                style={{
-                                  padding: '0.4rem 0.85rem',
-                                  borderRadius: '0.375rem',
-                                  border: isSelected ? '2px solid var(--primary-color)' : '1px solid var(--border-color)',
-                                  backgroundColor: isSelected ? 'rgba(79, 70, 229, 0.08)' : 'var(--bg-secondary)',
-                                  color: isSelected ? 'var(--primary-color)' : 'var(--text-primary)',
-                                  fontWeight: isSelected ? '600' : '500',
-                                  cursor: 'pointer',
-                                  transition: 'all 0.15s ease',
-                                  fontSize: '0.875rem',
-                                  boxShadow: isSelected ? '0 1px 2px rgba(0,0,0,0.05)' : 'none'
-                                }}
-                              >
-                                {fy}
-                              </button>
-                            );
-                          })}
-                        </div>
+                        <label style={{ fontSize: '0.875rem', fontWeight: 500, marginBottom: '0.4rem', display: 'block' }}>Financial Year</label>
+                        <select required value={newPayment.financialYear} onChange={(e) => setNewPayment({ ...newPayment, financialYear: e.target.value })}>
+                          <option value="">-- Select FY --</option>
+                          {['2020-21', '2021-22', '2022-23', '2023-24', '2024-25', '2025-26', '2026-27'].map((fy: string) => (
+                            <option key={fy} value={fy}>{fy}</option>
+                          ))}
+                        </select>
                       </div>
                       <div>
                         <label style={{ fontSize: '0.875rem', fontWeight: 500, marginBottom: '0.4rem', display: 'block' }}>Payment Date</label>
@@ -3269,33 +3249,13 @@ const TenantAdminDashboard = () => {
                         </select>
                       </div>
                       <div>
-                        <label style={{ fontSize: '0.875rem', fontWeight: 500, marginBottom: '0.5rem', display: 'block' }}>Financial Year</label>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.25rem' }}>
-                          {['2020-21', '2021-22', '2022-23', '2023-24', '2024-25', '2025-26', '2026-27'].map((fy: string) => {
-                            const isSelected = editingPayment.financialYear === fy;
-                            return (
-                              <button
-                                key={fy}
-                                type="button"
-                                onClick={() => setEditingPayment({ ...editingPayment, financialYear: fy })}
-                                style={{
-                                  padding: '0.4rem 0.85rem',
-                                  borderRadius: '0.375rem',
-                                  border: isSelected ? '2px solid var(--primary-color)' : '1px solid var(--border-color)',
-                                  backgroundColor: isSelected ? 'rgba(79, 70, 229, 0.08)' : 'var(--bg-secondary)',
-                                  color: isSelected ? 'var(--primary-color)' : 'var(--text-primary)',
-                                  fontWeight: isSelected ? '600' : '500',
-                                  cursor: 'pointer',
-                                  transition: 'all 0.15s ease',
-                                  fontSize: '0.875rem',
-                                  boxShadow: isSelected ? '0 1px 2px rgba(0,0,0,0.05)' : 'none'
-                                }}
-                              >
-                                {fy}
-                              </button>
-                            );
-                          })}
-                        </div>
+                        <label style={{ fontSize: '0.875rem', fontWeight: 500, marginBottom: '0.4rem', display: 'block' }}>Financial Year</label>
+                        <select required value={editingPayment.financialYear} onChange={(e) => setEditingPayment({ ...editingPayment, financialYear: e.target.value })}>
+                          <option value="">-- Select FY --</option>
+                          {['2020-21', '2021-22', '2022-23', '2023-24', '2024-25', '2025-26', '2026-27'].map((fy: string) => (
+                            <option key={fy} value={fy}>{fy}</option>
+                          ))}
+                        </select>
                       </div>
                     </div>
                     <div className="grid-2">
