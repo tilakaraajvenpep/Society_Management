@@ -441,7 +441,8 @@ const MemberPortal = () => {
 
   useEffect(() => {
     if (memberInfo?.createdAt) {
-      const regYear = new Date(memberInfo.createdAt).getFullYear();
+      const regDate = new Date(memberInfo.createdAt);
+      const regYear = regDate.getUTCMonth() >= 3 ? regDate.getUTCFullYear() : regDate.getUTCFullYear() - 1;
       if (!isNaN(regYear)) {
         setVisibleStartYear(regYear);
       }
@@ -457,7 +458,10 @@ const MemberPortal = () => {
         const currentStartYear = now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1;
         const currentFY = `${currentStartYear}-${((currentStartYear + 1) % 100).toString().padStart(2, '0')}`;
         const currentYearCost = memberInfo?.tenant?.maintenanceCosts?.find((c: any) => c.financialYear === currentFY)?.amount;
-        const regYear = memberInfo?.createdAt ? new Date(memberInfo.createdAt).getFullYear() : 2022;
+        const regDate = memberInfo?.createdAt ? new Date(memberInfo.createdAt) : null;
+        const regYear = regDate 
+          ? (regDate.getUTCMonth() >= 3 ? regDate.getUTCFullYear() : regDate.getUTCFullYear() - 1)
+          : 2022;
 
         // Construct visibleYears for history table showing 5 years based on visibleStartYear
         const visibleYears = Array.from({ length: 5 }).map((_, idx) => {
@@ -502,12 +506,9 @@ const MemberPortal = () => {
           // 2. Fallback to paidUntil date logic
           if (memberInfo?.paidUntil) {
             const paidUntilDate = new Date(memberInfo.paidUntil);
-            const paidYear = paidUntilDate.getUTCFullYear();
-            const paidMonth = paidUntilDate.getUTCMonth(); // 0-11
-            
-            const targetYear = startYear + 1;
-            if (paidYear > targetYear) return true;
-            if (paidYear === targetYear && paidMonth >= 2) return true;
+            const paidUntilUTC = new Date(Date.UTC(paidUntilDate.getUTCFullYear(), paidUntilDate.getUTCMonth(), paidUntilDate.getUTCDate()));
+            const targetEndDate = new Date(Date.UTC(startYear + 1, 2, 31)); // March 31 of target end year
+            if (paidUntilUTC >= targetEndDate) return true;
           }
 
           return false;
