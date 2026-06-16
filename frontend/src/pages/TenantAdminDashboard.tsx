@@ -3175,7 +3175,10 @@ const TenantAdminDashboard = () => {
                         <label style={{ fontSize: '0.875rem', fontWeight: 500, marginBottom: '0.4rem', display: 'block' }}>Financial Year</label>
                         <select required value={newPayment.financialYear} onChange={(e) => setNewPayment({ ...newPayment, financialYear: e.target.value })}>
                           <option value="">-- Select FY --</option>
-                          {['2020-21', '2021-22', '2022-23', '2023-24', '2024-25', '2025-26', '2026-27'].map((fy: string) => (
+                          {Array.from({ length: 31 }, (_, i) => {
+                            const y = 2020 + i;
+                            return `${y}-${((y + 1) % 100).toString().padStart(2, '0')}`;
+                          }).map((fy: string) => (
                             <option key={fy} value={fy}>{fy}</option>
                           ))}
                         </select>
@@ -3252,7 +3255,10 @@ const TenantAdminDashboard = () => {
                         <label style={{ fontSize: '0.875rem', fontWeight: 500, marginBottom: '0.4rem', display: 'block' }}>Financial Year</label>
                         <select required value={editingPayment.financialYear} onChange={(e) => setEditingPayment({ ...editingPayment, financialYear: e.target.value })}>
                           <option value="">-- Select FY --</option>
-                          {['2020-21', '2021-22', '2022-23', '2023-24', '2024-25', '2025-26', '2026-27'].map((fy: string) => (
+                          {Array.from({ length: 31 }, (_, i) => {
+                            const y = 2020 + i;
+                            return `${y}-${((y + 1) % 100).toString().padStart(2, '0')}`;
+                          }).map((fy: string) => (
                             <option key={fy} value={fy}>{fy}</option>
                           ))}
                         </select>
