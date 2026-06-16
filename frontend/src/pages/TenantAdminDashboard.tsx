@@ -1159,6 +1159,10 @@ const TenantAdminDashboard = () => {
 
   const handleSubmitPayment = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!newPayment.financialYear) {
+      alert('Please select a Financial Year');
+      return;
+    }
     try {
       await axios.post('/payments', newPayment, {
         headers: { Authorization: `Bearer ${token}` }
@@ -1174,6 +1178,10 @@ const TenantAdminDashboard = () => {
 
   const handleUpdatePayment = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!editingPayment || !editingPayment.financialYear) {
+      alert('Please select a Financial Year');
+      return;
+    }
     try {
       await axios.patch(`/payments/${editingPayment.id}`, editingPayment, {
         headers: { Authorization: `Bearer ${token}` }
@@ -3164,13 +3172,39 @@ const TenantAdminDashboard = () => {
                     </div>
                     <div className="grid-2">
                       <div>
-                        <label style={{ fontSize: '0.875rem', fontWeight: 500, marginBottom: '0.4rem', display: 'block' }}>Financial Year</label>
-                        <select required value={newPayment.financialYear} onChange={(e) => setNewPayment({ ...newPayment, financialYear: e.target.value })}>
-                          <option value="">-- Select FY --</option>
-                          {maintenanceCosts.map((c: any) => (
-                            <option key={c.id} value={c.financialYear}>{c.financialYear}</option>
-                          ))}
-                        </select>
+                        <label style={{ fontSize: '0.875rem', fontWeight: 500, marginBottom: '0.5rem', display: 'block' }}>Financial Year</label>
+                        {maintenanceCosts.length === 0 ? (
+                          <div style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', fontStyle: 'italic', padding: '0.5rem 0' }}>
+                            No financial years configured yet.
+                          </div>
+                        ) : (
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.25rem' }}>
+                            {maintenanceCosts.map((c: any) => {
+                              const isSelected = newPayment.financialYear === c.financialYear;
+                              return (
+                                <button
+                                  key={c.id}
+                                  type="button"
+                                  onClick={() => setNewPayment({ ...newPayment, financialYear: c.financialYear })}
+                                  style={{
+                                    padding: '0.4rem 0.85rem',
+                                    borderRadius: '0.375rem',
+                                    border: isSelected ? '2px solid var(--primary-color)' : '1px solid var(--border-color)',
+                                    backgroundColor: isSelected ? 'rgba(79, 70, 229, 0.08)' : 'var(--bg-secondary)',
+                                    color: isSelected ? 'var(--primary-color)' : 'var(--text-primary)',
+                                    fontWeight: isSelected ? '600' : '500',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.15s ease',
+                                    fontSize: '0.875rem',
+                                    boxShadow: isSelected ? '0 1px 2px rgba(0,0,0,0.05)' : 'none'
+                                  }}
+                                >
+                                  {c.financialYear}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
                       </div>
                       <div>
                         <label style={{ fontSize: '0.875rem', fontWeight: 500, marginBottom: '0.4rem', display: 'block' }}>Payment Date</label>
@@ -3241,13 +3275,39 @@ const TenantAdminDashboard = () => {
                         </select>
                       </div>
                       <div>
-                        <label style={{ fontSize: '0.875rem', fontWeight: 500, marginBottom: '0.4rem', display: 'block' }}>Financial Year</label>
-                        <select required value={editingPayment.financialYear} onChange={(e) => setEditingPayment({ ...editingPayment, financialYear: e.target.value })}>
-                          <option value="">-- Select FY --</option>
-                          {maintenanceCosts.map((c: any) => (
-                            <option key={c.id} value={c.financialYear}>{c.financialYear}</option>
-                          ))}
-                        </select>
+                        <label style={{ fontSize: '0.875rem', fontWeight: 500, marginBottom: '0.5rem', display: 'block' }}>Financial Year</label>
+                        {maintenanceCosts.length === 0 ? (
+                          <div style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', fontStyle: 'italic', padding: '0.5rem 0' }}>
+                            No financial years configured yet.
+                          </div>
+                        ) : (
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.25rem' }}>
+                            {maintenanceCosts.map((c: any) => {
+                              const isSelected = editingPayment.financialYear === c.financialYear;
+                              return (
+                                <button
+                                  key={c.id}
+                                  type="button"
+                                  onClick={() => setEditingPayment({ ...editingPayment, financialYear: c.financialYear })}
+                                  style={{
+                                    padding: '0.4rem 0.85rem',
+                                    borderRadius: '0.375rem',
+                                    border: isSelected ? '2px solid var(--primary-color)' : '1px solid var(--border-color)',
+                                    backgroundColor: isSelected ? 'rgba(79, 70, 229, 0.08)' : 'var(--bg-secondary)',
+                                    color: isSelected ? 'var(--primary-color)' : 'var(--text-primary)',
+                                    fontWeight: isSelected ? '600' : '500',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.15s ease',
+                                    fontSize: '0.875rem',
+                                    boxShadow: isSelected ? '0 1px 2px rgba(0,0,0,0.05)' : 'none'
+                                  }}
+                                >
+                                  {c.financialYear}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
                       </div>
                     </div>
                     <div className="grid-2">
