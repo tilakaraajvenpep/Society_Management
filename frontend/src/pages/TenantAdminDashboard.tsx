@@ -939,6 +939,7 @@ const TenantAdminDashboard = () => {
     outstandingDues: 0, password: '', enableLogin: false, 
     defaultTenure: 'MONTHLY', paidUntil: '',
     initialPaymentAmount: 0, initialPaymentMode: 'CASH', initialPaymentNotes: '',
+    initialPaymentDate: getTodayString(),
     photoUrl: '', idProofUrl: '',
     createdAt: getTodayString()
   });
@@ -1162,6 +1163,7 @@ const TenantAdminDashboard = () => {
         outstandingDues: 0, password: '', enableLogin: false, 
         defaultTenure: 'MONTHLY', paidUntil: '', 
         initialPaymentAmount: 0, initialPaymentMode: 'CASH', initialPaymentNotes: '',
+        initialPaymentDate: getTodayString(),
         photoUrl: '', idProofUrl: '',
         createdAt: getTodayString()
       });
@@ -2706,7 +2708,11 @@ const TenantAdminDashboard = () => {
                         <option value="CHEQUE">Cheque</option>
                       </select>
                     </div>
-                    <div style={{ gridColumn: 'span 2' }}>
+                    <div>
+                      <label style={{ fontSize: '0.875rem', fontWeight: 500, marginBottom: '0.4rem', display: 'block' }}>Date of Collection</label>
+                      <input type="date" value={newMember.initialPaymentDate} onChange={(e) => setNewMember({ ...newMember, initialPaymentDate: e.target.value })} />
+                    </div>
+                    <div>
                       <label style={{ fontSize: '0.875rem', fontWeight: 500, marginBottom: '0.4rem', display: 'block' }}>Payment Notes</label>
                       <input type="text" placeholder="e.g. Corpus Fund, Setup Fee" value={newMember.initialPaymentNotes} onChange={(e) => setNewMember({ ...newMember, initialPaymentNotes: e.target.value })} />
                     </div>

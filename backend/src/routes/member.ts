@@ -185,7 +185,7 @@ router.get("/", authorize(["TENANT_ADMIN"]), async (req: any, res) => {
 });
 
 router.post("/", authorize(["TENANT_ADMIN"]), async (req: any, res) => {
-  const { name, email, mobile, flatNo, address, outstandingDues, password, enableLogin, defaultTenure, paidUntil, initialPaymentAmount, initialPaymentMode, initialPaymentNotes, photoUrl, idProofUrl, createdAt } = req.body;
+  const { name, email, mobile, flatNo, address, outstandingDues, password, enableLogin, defaultTenure, paidUntil, initialPaymentAmount, initialPaymentMode, initialPaymentNotes, initialPaymentDate, photoUrl, idProofUrl, createdAt } = req.body;
   try {
     const result = await prisma.$transaction(async (tx) => {
       let userId = undefined;
@@ -271,6 +271,7 @@ router.post("/", authorize(["TENANT_ADMIN"]), async (req: any, res) => {
             receiptNumber,
             handoverStatus: mode === "CASH" ? "WITH_COLLECTOR" : "TRANSFERRED_TO_BANK",
             periodLabel: "Initial Onboarding Fee",
+            paymentDate: initialPaymentDate ? new Date(initialPaymentDate) : (createdAt ? new Date(createdAt) : new Date()),
           }
         });
 
