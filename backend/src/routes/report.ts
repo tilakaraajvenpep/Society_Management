@@ -1,7 +1,7 @@
 import express from "express";
 import prisma from "../utils/prisma";
 import { authenticate, authorize } from "../middleware/auth";
-import { calculateDues } from "./member";
+import { calculateMemberOutstanding } from "./member";
 
 const router = express.Router();
 router.use(authenticate);
@@ -37,10 +37,8 @@ router.get("/summary", authorize(["TENANT_ADMIN"]), async (req: any, res) => {
     
     for (const m of members) {
       let additionalDues = 0;
-      const d = m.paidUntil ? new Date(m.paidUntil) : null;
-      const paidUntilStr = d ? `${d.getUTCFullYear()}-${(d.getUTCMonth() + 1).toString().padStart(2, '0')}-${d.getUTCDate().toString().padStart(2, '0')}` : null;
-      additionalDues = await calculateDues(prisma, tenantId, paidUntilStr, m.defaultTenure, m.createdAt);
-      const totalM = (m.outstandingDues || 0) + additionalDues;
+      additionalDues = await calculateMemberOutstanding(prisma, tenantId, m.id, m.createdAt);
+      const totalM = additionalDues;
       if (totalM > 0) {
         totalOutstanding += totalM;
         membersWithDuesCount += 1;

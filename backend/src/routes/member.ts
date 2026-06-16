@@ -34,14 +34,11 @@ router.get("/profile", authorize(["MEMBER"]), async (req: any, res) => {
       return res.status(404).json({ message: "Member profile not found" });
     }
     
-    let additionalDues = 0;
-    const d = member.paidUntil ? new Date(member.paidUntil) : null;
-    const paidUntilStr = d ? `${d.getUTCFullYear()}-${(d.getUTCMonth() + 1).toString().padStart(2, '0')}-${d.getUTCDate().toString().padStart(2, '0')}` : null;
-    additionalDues = await calculateDues(prisma, member.tenantId, paidUntilStr, member.defaultTenure, member.createdAt);
+    const totalDues = await calculateMemberOutstanding(prisma, member.tenantId, member.id, member.createdAt);
     
     res.json({
       ...member,
-      totalDues: (member.outstandingDues || 0) + additionalDues
+      totalDues
     });
   } catch (error) {
     res.status(500).json({ message: "Error fetching profile", error });
@@ -56,118 +53,42 @@ export function getFinancialYearForDate(date: Date): string {
   return `${startYear}-${endYear.toString().padStart(2, '0')}`;
 }
 
-export async function calculateDues(
+export async function calculateMemberOutstanding(
   tx: any,
   tenantId: string,
-  paidUntilStr: string | null | undefined,
-  defaultTenure: string,
-  registrationDate?: Date | string
+  memberId: string,
+  registrationDate: Date | string
 ): Promise<number> {
-  const regDate = registrationDate ? new Date(registrationDate) : new Date();
+  const regDate = new Date(registrationDate);
   const regDateUTC = new Date(Date.UTC(regDate.getUTCFullYear(), regDate.getUTCMonth(), regDate.getUTCDate()));
 
-  let activeDate: Date;
-
-  if (paidUntilStr) {
-    const [year, month, day] = paidUntilStr.split('-').map(Number);
-    activeDate = new Date(Date.UTC(year, month - 1, day));
-  } else {
-    activeDate = regDateUTC;
-  }
-
-  if (activeDate < regDateUTC) {
-    activeDate = regDateUTC;
-  }
-  
   const today = new Date();
   const todayUTC = new Date(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()));
-  
-  if (activeDate > todayUTC) {
-    return 0;
-  }
-  
-  // Fetch all maintenance costs for this tenant
-  const tenantCosts = await tx.maintenanceCost.findMany({
-    where: { tenantId }
-  });
-  
-  const tenant = await tx.tenant.findUnique({
-    where: { id: tenantId }
-  });
-  const defaultAmount = tenant?.maintenanceAmount || 0;
-  
-  const getRateForDate = (date: Date, tenure: string): number => {
-    const fy = getFinancialYearForDate(date);
-    const costRecord = tenantCosts.find((c: any) => c.financialYear === fy);
-    const annualCost = costRecord ? costRecord.amount : (defaultAmount * 12);
-    
-    if (tenure === "ANNUAL") {
-      return annualCost;
-    } else if (tenure === "QUARTERLY") {
-      return annualCost / 4;
-    } else if (tenure === "HALF_YEARLY") {
-      return annualCost / 2;
-    } else {
-      // MONTHLY
-      return annualCost / 12;
-    }
-  };
 
-  let totalDues = 0;
-  
-  if (defaultTenure === "ANNUAL") {
-    const startFYYear = activeDate.getUTCMonth() >= 3 ? activeDate.getUTCFullYear() : activeDate.getUTCFullYear() - 1;
-    const endFYYear = todayUTC.getUTCMonth() >= 3 ? todayUTC.getUTCFullYear() : todayUTC.getUTCFullYear() - 1;
-    
-    for (let y = startFYYear; y <= endFYYear; y++) {
-      const fyDate = new Date(Date.UTC(y, 3, 1));
-      totalDues += getRateForDate(fyDate, "ANNUAL");
-    }
-  } else if (defaultTenure === "QUARTERLY") {
-    const yearsDiff = todayUTC.getUTCFullYear() - activeDate.getUTCFullYear();
-    const monthsDiff = todayUTC.getUTCMonth() - activeDate.getUTCMonth();
-    let totalMonths = yearsDiff * 12 + monthsDiff;
-    if (todayUTC.getUTCDate() >= activeDate.getUTCDate()) {
-      totalMonths += 1;
-    }
-    
-    const totalQuarters = Math.ceil(totalMonths / 3);
-    for (let q = 0; q < totalQuarters; q++) {
-      const qDate = new Date(activeDate);
-      qDate.setUTCMonth(activeDate.getUTCMonth() + q * 3);
-      totalDues += getRateForDate(qDate, "QUARTERLY");
-    }
-  } else if (defaultTenure === "HALF_YEARLY") {
-    const yearsDiff = todayUTC.getUTCFullYear() - activeDate.getUTCFullYear();
-    const monthsDiff = todayUTC.getUTCMonth() - activeDate.getUTCMonth();
-    let totalMonths = yearsDiff * 12 + monthsDiff;
-    if (todayUTC.getUTCDate() >= activeDate.getUTCDate()) {
-      totalMonths += 1;
-    }
-    
-    const totalHalfYears = Math.ceil(totalMonths / 6);
-    for (let h = 0; h < totalHalfYears; h++) {
-      const hDate = new Date(activeDate);
-      hDate.setUTCMonth(activeDate.getUTCMonth() + h * 6);
-      totalDues += getRateForDate(hDate, "HALF_YEARLY");
-    }
-  } else {
-    // MONTHLY
-    const yearsDiff = todayUTC.getUTCFullYear() - activeDate.getUTCFullYear();
-    const monthsDiff = todayUTC.getUTCMonth() - activeDate.getUTCMonth();
-    let totalMonths = yearsDiff * 12 + monthsDiff;
-    if (todayUTC.getUTCDate() >= activeDate.getUTCDate()) {
-      totalMonths += 1;
-    }
-    
-    for (let m = 0; m < totalMonths; m++) {
-      const mDate = new Date(activeDate);
-      mDate.setUTCMonth(activeDate.getUTCMonth() + m);
-      totalDues += getRateForDate(mDate, "MONTHLY");
+  // Get all maintenance costs for this tenant (only years where fee has been set)
+  const tenantCosts = await tx.maintenanceCost.findMany({ where: { tenantId } });
+
+  // FY range: from registration FY to current FY
+  const startFYYear = regDateUTC.getUTCMonth() >= 3 ? regDateUTC.getUTCFullYear() : regDateUTC.getUTCFullYear() - 1;
+  const endFYYear = todayUTC.getUTCMonth() >= 3 ? todayUTC.getUTCFullYear() : todayUTC.getUTCFullYear() - 1;
+
+  let totalBilled = 0;
+  for (let y = startFYYear; y <= endFYYear; y++) {
+    const fyStr = `${y}-${((y + 1) % 100).toString().padStart(2, '0')}`;
+    const costRecord = tenantCosts.find((c: any) => c.financialYear === fyStr);
+    if (costRecord) {
+      // Only bill for FYs where the admin has explicitly set a fee
+      totalBilled += costRecord.amount;
     }
   }
-  
-  return totalDues;
+
+  // Sum all payments made by this member (excluding cancelled)
+  const payments = await tx.payment.findMany({
+    where: { memberId, tenantId, status: { not: 'CANCELLED' } }
+  });
+  const totalPaid = payments.reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
+
+  return Math.max(0, totalBilled - totalPaid);
 }
 
 // Tenant Admin only
@@ -178,13 +99,10 @@ router.get("/", authorize(["TENANT_ADMIN"]), async (req: any, res) => {
   
   const enrichedMembers = await Promise.all(
     members.map(async (m) => {
-      let additionalDues = 0;
-      const d = m.paidUntil ? new Date(m.paidUntil) : null;
-      const paidUntilStr = d ? `${d.getUTCFullYear()}-${(d.getUTCMonth() + 1).toString().padStart(2, '0')}-${d.getUTCDate().toString().padStart(2, '0')}` : null;
-      additionalDues = await calculateDues(prisma, req.user.tenantId, paidUntilStr, m.defaultTenure, m.createdAt);
+      const totalDues = await calculateMemberOutstanding(prisma, req.user.tenantId, m.id, m.createdAt);
       return {
         ...m,
-        totalDues: (m.outstandingDues || 0) + additionalDues
+        totalDues
       };
     })
   );
@@ -240,10 +158,6 @@ router.post("/", authorize(["TENANT_ADMIN"]), async (req: any, res) => {
         });
         userId = user.id;
       }
-      const additionalDues = await calculateDues(tx, req.user.tenantId, paidUntil, defaultTenure, createdAt ? new Date(createdAt) : new Date());
-      const inputDues = outstandingDues ? parseFloat(outstandingDues.toString()) : 0;
-      const totalOutstandingDues = inputDues + additionalDues;
-
       const member = await tx.member.create({
         data: {
           name,
@@ -251,7 +165,7 @@ router.post("/", authorize(["TENANT_ADMIN"]), async (req: any, res) => {
           mobile,
           flatNo,
           address,
-          outstandingDues: totalOutstandingDues,
+          outstandingDues: 0,
           tenantId: req.user.tenantId,
           userId,
           defaultTenure: defaultTenure || "MONTHLY",

@@ -1,7 +1,7 @@
 import express from "express";
 import prisma from "../utils/prisma";
 import { authenticate, authorize } from "../middleware/auth";
-import { calculateDues } from "./member";
+import { calculateMemberOutstanding } from "./member";
 
 const router = express.Router();
 
@@ -11,7 +11,7 @@ router.post("/", authorize(["TENANT_ADMIN"]), async (req: any, res) => {
   const { memberId, amount, mode, notes, subscriptionId, paidMonths, periodLabel, coverageStartDate, coverageEndDate, paymentDate, financialYear } = req.body;
   try {
     // Fetch member name and current paidUntil
-    const currentMember = await prisma.member.findUnique({ where: { id: memberId }, select: { name: true, flatNo: true, paidUntil: true, outstandingDues: true } });
+    const currentMember = await prisma.member.findUnique({ where: { id: memberId }, select: { name: true, flatNo: true, paidUntil: true } });
     const memberLabel = currentMember ? `${currentMember.name} (Flat ${currentMember.flatNo})` : memberId;
 
     const payment = await prisma.$transaction(async (tx) => {
@@ -67,16 +67,10 @@ router.post("/", authorize(["TENANT_ADMIN"]), async (req: any, res) => {
         newPaidUntil.setMonth(newPaidUntil.getMonth() + monthsToAdd);
       }
 
-      // Decrease member's outstandingDues (up to 0) and update paidUntil
-      const memberDues = currentMember?.outstandingDues || 0;
-      const decrementAmount = Math.min(memberDues, parseFloat(amount.toString()));
-
+      // Update paidUntil only (outstandingDues is computed dynamically)
       await tx.member.update({
         where: { id: memberId },
-        data: { 
-          outstandingDues: { decrement: decrementAmount },
-          paidUntil: newPaidUntil
-        }
+        data: { paidUntil: newPaidUntil }
       });
 
       return p;
@@ -129,13 +123,10 @@ router.get("/upcoming", authorize(["TENANT_ADMIN"]), async (req: any, res) => {
 
     const enrichedMembers = await Promise.all(
       upcomingMembers.map(async (m) => {
-        let additionalDues = 0;
-        const d = m.paidUntil ? new Date(m.paidUntil) : null;
-        const paidUntilStr = d ? `${d.getUTCFullYear()}-${(d.getUTCMonth() + 1).toString().padStart(2, '0')}-${d.getUTCDate().toString().padStart(2, '0')}` : null;
-        additionalDues = await calculateDues(prisma, req.user.tenantId, paidUntilStr, m.defaultTenure, m.createdAt);
+        const totalDues = await calculateMemberOutstanding(prisma, req.user.tenantId, m.id, m.createdAt);
         return {
           ...m,
-          totalDues: (m.outstandingDues || 0) + additionalDues
+          totalDues
         };
       })
     );
@@ -159,7 +150,7 @@ router.patch("/:id", authorize(["TENANT_ADMIN"]), async (req: any, res) => {
       let finalAmount = amount !== undefined ? parseFloat(amount.toString()) : current.amount;
       let finalMode = mode || current.mode;
 
-      // Handle Cash Balance & Member Dues changes:
+      // Handle Cash Balance changes only (outstandingDues is now computed dynamically):
       // Case 1: Payment is being cancelled
       if (finalStatus === "CANCELLED" && current.status !== "CANCELLED") {
         if (current.mode === "CASH") {
@@ -168,10 +159,6 @@ router.patch("/:id", authorize(["TENANT_ADMIN"]), async (req: any, res) => {
             data: { balance: { decrement: current.amount } }
           });
         }
-        await tx.member.update({
-          where: { id: current.memberId },
-          data: { outstandingDues: { increment: current.amount } }
-        });
       } 
       // Case 2: Payment is active, and amount or mode changed
       else if (finalStatus !== "CANCELLED") {
@@ -180,13 +167,6 @@ router.patch("/:id", authorize(["TENANT_ADMIN"]), async (req: any, res) => {
           await tx.cashBalance.update({
             where: { userId: current.collectedById },
             data: { balance: { decrement: current.amount } }
-          });
-        }
-        // Revert old member dues impact
-        if (current.status !== "CANCELLED") {
-          await tx.member.update({
-            where: { id: current.memberId },
-            data: { outstandingDues: { increment: current.amount } }
           });
         }
 
@@ -198,11 +178,6 @@ router.patch("/:id", authorize(["TENANT_ADMIN"]), async (req: any, res) => {
             create: { userId: current.collectedById, balance: finalAmount }
           });
         }
-        // Apply new member dues impact
-        await tx.member.update({
-          where: { id: current.memberId },
-          data: { outstandingDues: { decrement: finalAmount } }
-        });
       }
 
       const updated = await tx.payment.update({
