@@ -433,7 +433,7 @@ const MemberPortal = () => {
             amount: amount,
             startYear: startYr
           };
-        });
+        }).filter(y => y.amount !== null) as { id: string; financialYear: string; amount: number; startYear: number }[];
 
         const isYearPaid = (startYear: number) => {
           const fyStr = `${startYear}-${((startYear + 1) % 100).toString().padStart(2, '0')}`;
@@ -529,19 +529,18 @@ const MemberPortal = () => {
                 Your maintenance fee structure by financial year (showing since your registration year).
               </p>
               
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem', marginBottom: '1.5rem' }}>
-                <div style={{ backgroundColor: 'var(--bg-secondary)', padding: '1rem', borderRadius: '0.75rem', border: '1px solid var(--border-color)' }}>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.25rem' }}>
-                    Current Year ({currentFY})
-                  </div>
-                  <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                    {currentYearCost !== undefined 
-                      ? `₹${currentYearCost.toLocaleString()}/yr` 
-                      : 'Fee not set'
-                    }
+              {currentYearCost !== undefined && (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem', marginBottom: '1.5rem' }}>
+                  <div style={{ backgroundColor: 'var(--bg-secondary)', padding: '1rem', borderRadius: '0.75rem', border: '1px solid var(--border-color)' }}>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.25rem' }}>
+                      Current Year ({currentFY})
+                    </div>
+                    <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                      ₹{currentYearCost.toLocaleString()}/yr
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
 
               <h4 style={{ fontSize: '0.9rem', marginBottom: '0.75rem', color: 'var(--text-primary)' }}>Your Yearly Maintenance History</h4>
               <div className="table-container" style={{ overflowX: 'auto' }}>
@@ -554,28 +553,36 @@ const MemberPortal = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {visibleYears.map((c) => {
-                      const isCurrent = c.financialYear === currentFY;
-                      const paid = isYearPaid(c.startYear);
-                      return (
-                        <tr key={c.id} style={{ borderBottom: '1px solid var(--border-color)', backgroundColor: isCurrent ? 'var(--bg-tertiary)' : 'transparent' }}>
-                          <td style={{ padding: '0.75rem', fontSize: '0.875rem' }}>
-                            <strong>{c.financialYear}</strong>
-                            {isCurrent && <span style={{ marginLeft: '0.5rem', fontSize: '0.7rem', color: 'var(--primary)', backgroundColor: 'rgba(37, 99, 235, 0.1)', padding: '0.1rem 0.4rem', borderRadius: '0.25rem', fontWeight: 600 }}>Current</span>}
-                          </td>
-                          <td style={{ padding: '0.75rem', fontSize: '0.875rem', fontWeight: 600 }}>
-                            {c.amount !== null ? `₹${c.amount.toLocaleString()}/year` : 'Fee not set'}
-                          </td>
-                          <td style={{ padding: '0.75rem', fontSize: '0.825rem', textAlign: 'right' }}>
-                            {paid ? (
-                              <span className="badge badge-success" style={{ backgroundColor: '#10b981', color: 'white', fontWeight: 600 }}>Paid</span>
-                            ) : (
-                              <span className="badge" style={{ backgroundColor: '#ef4444', color: 'white', fontWeight: 600 }}>Due</span>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
+                    {visibleYears.length > 0 ? (
+                      visibleYears.map((c) => {
+                        const isCurrent = c.financialYear === currentFY;
+                        const paid = isYearPaid(c.startYear);
+                        return (
+                          <tr key={c.id} style={{ borderBottom: '1px solid var(--border-color)', backgroundColor: isCurrent ? 'var(--bg-tertiary)' : 'transparent' }}>
+                            <td style={{ padding: '0.75rem', fontSize: '0.875rem' }}>
+                              <strong>{c.financialYear}</strong>
+                              {isCurrent && <span style={{ marginLeft: '0.5rem', fontSize: '0.7rem', color: 'var(--primary)', backgroundColor: 'rgba(37, 99, 235, 0.1)', padding: '0.1rem 0.4rem', borderRadius: '0.25rem', fontWeight: 600 }}>Current</span>}
+                            </td>
+                            <td style={{ padding: '0.75rem', fontSize: '0.875rem', fontWeight: 600 }}>
+                              ₹{c.amount.toLocaleString()}/year
+                            </td>
+                            <td style={{ padding: '0.75rem', fontSize: '0.825rem', textAlign: 'right' }}>
+                              {paid ? (
+                                <span className="badge badge-success" style={{ backgroundColor: '#10b981', color: 'white', fontWeight: 600 }}>Paid</span>
+                              ) : (
+                                <span className="badge" style={{ backgroundColor: '#ef4444', color: 'white', fontWeight: 600 }}>Due</span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })
+                    ) : (
+                      <tr>
+                        <td colSpan={3} style={{ padding: '1.5rem', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
+                          No maintenance records configured for this period.
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
