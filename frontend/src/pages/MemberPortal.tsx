@@ -439,6 +439,15 @@ const MemberPortal = () => {
     fetchProfile();
   }, [token]);
 
+  useEffect(() => {
+    if (memberInfo?.createdAt) {
+      const regYear = new Date(memberInfo.createdAt).getFullYear();
+      if (!isNaN(regYear)) {
+        setVisibleStartYear(regYear);
+      }
+    }
+  }, [memberInfo]);
+
   const renderContent = () => {
     switch (activeTab) {
       case 'overview': {
