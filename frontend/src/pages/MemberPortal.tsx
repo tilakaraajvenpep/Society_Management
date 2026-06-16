@@ -457,6 +457,8 @@ const MemberPortal = () => {
         const currentStartYear = now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1;
         const currentFY = `${currentStartYear}-${((currentStartYear + 1) % 100).toString().padStart(2, '0')}`;
         const currentYearCost = memberInfo?.tenant?.maintenanceCosts?.find((c: any) => c.financialYear === currentFY)?.amount;
+        const regYear = memberInfo?.createdAt ? new Date(memberInfo.createdAt).getFullYear() : 2022;
+
         // Construct visibleYears for history table showing 5 years based on visibleStartYear
         const visibleYears = Array.from({ length: 5 }).map((_, idx) => {
           const startYr = visibleStartYear + idx;
@@ -471,7 +473,7 @@ const MemberPortal = () => {
             amount: amount,
             startYear: startYr
           };
-        }).filter(y => y.amount !== null) as { id: string; financialYear: string; amount: number; startYear: number }[];
+        }).filter(y => y.amount !== null && y.startYear >= regYear) as { id: string; financialYear: string; amount: number; startYear: number }[];
 
         const isYearPaid = (startYear: number) => {
           const fyStr = `${startYear}-${((startYear + 1) % 100).toString().padStart(2, '0')}`;
@@ -628,7 +630,8 @@ const MemberPortal = () => {
                   type="button"
                   className="btn btn-secondary" 
                   style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', padding: '0.4rem 0.8rem', fontSize: '0.8rem' }} 
-                  onClick={() => setVisibleStartYear(prev => prev - 5)}
+                  onClick={() => setVisibleStartYear(prev => Math.max(regYear, prev - 5))}
+                  disabled={visibleStartYear <= regYear}
                 >
                   &larr; Previous 5 Years
                 </button>
