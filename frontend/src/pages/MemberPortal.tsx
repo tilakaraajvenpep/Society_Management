@@ -473,6 +473,12 @@ const MemberPortal = () => {
           
           // 1. First check payment history whether a payment has been received in the member name for that year
           if (memberInfo?.payments && memberInfo.payments.length > 0) {
+            // Check if any payment's financialYear matches the financial year string
+            const hasMatchingFY = memberInfo.payments.some((p: any) => {
+              return p.financialYear === fyStr;
+            });
+            if (hasMatchingFY) return true;
+
             // Check if any payment's periodLabel contains the financial year string
             const hasMatchingLabel = memberInfo.payments.some((p: any) => {
               if (!p.periodLabel) return false;
