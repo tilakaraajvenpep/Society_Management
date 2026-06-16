@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 
 import {
   LayoutDashboard, Users,
-  ArrowDownLeft, Landmark, LogOut, Plus, Send,
+  ArrowDownLeft, ArrowDownRight, ArrowUpRight, Landmark, LogOut, Plus, Send,
   TrendingUp, Users2, Receipt, Building, Settings, History, Download, Upload, Edit, XCircle, Printer, Eye, UserCheck, Trash2, Calendar, BarChart2, Menu, X,
   MessageSquare, LifeBuoy, Clock, FileText, Image, Camera
 } from 'lucide-react';
@@ -913,6 +913,7 @@ const TenantAdminDashboard = () => {
   };
 
   const [activeTab, setActiveTab] = useState('overview');
+  const [reportTab, setReportTab] = useState('pnl');
   const [maintenanceCosts, setMaintenanceCosts] = useState<any[]>([]);
   const [selectedYear, setSelectedYear] = useState('');
   const [yearlyAmount, setYearlyAmount] = useState('');
@@ -1746,13 +1747,13 @@ const TenantAdminDashboard = () => {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
             <div className="card">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
-                <h3 style={{ margin: 0 }}>Financial Reports</h3>
-                <button className="btn btn-secondary" onClick={exportFinancialsAsCSV} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <h3 style={{ margin: 0, fontWeight: 700, fontSize: '1.5rem', letterSpacing: '-0.02em' }}>Financial Reports</h3>
+                <button className="btn btn-secondary" onClick={exportFinancialsAsCSV} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem', borderRadius: '0.5rem' }}>
                   <Download size={16} /> Export as Excel
                 </button>
               </div>
               
-              <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'flex-end', backgroundColor: 'var(--bg-secondary)', padding: '1rem', borderRadius: '0.5rem', marginBottom: '1.5rem' }}>
+              <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'flex-end', backgroundColor: 'var(--bg-secondary)', padding: '1rem', borderRadius: '0.5rem', marginBottom: '1.5rem', border: '1px solid var(--border-color)' }}>
                 <div>
                   <label style={{ fontSize: '0.75rem', fontWeight: 600, display: 'block', marginBottom: '0.25rem' }}>Month</label>
                   <select value={reportFilters.month} onChange={e => setReportFilters({...reportFilters, month: e.target.value, startDate: '', endDate: ''})} style={{ padding: '0.4rem', borderRadius: '0.25rem', border: '1px solid var(--border-color)' }}>
@@ -1787,164 +1788,278 @@ const TenantAdminDashboard = () => {
                 <button className="btn btn-primary" onClick={fetchFinancials} style={{ padding: '0.4rem 1rem' }}>Apply Filter</button>
               </div>
 
-              {/* Income & Expenditure Statement */}
-              <div className="card report-card" style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', marginBottom: '2rem' }}>
-                <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
-                    <Building size={24} style={{ color: 'var(--primary)' }} />
-                    <h2 style={{ fontSize: '1.5rem', fontWeight: 700, margin: 0, letterSpacing: '-0.02em' }}>{user?.tenantName || 'Society Name'}</h2>
-                  </div>
-                  {user?.tenantAddress && <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '0.75rem', maxWidth: '400px', margin: '0 auto 0.75rem' }}>{user.tenantAddress}</div>}
-                  <div style={{ display: 'inline-block', padding: '0.25rem 0.75rem', backgroundColor: 'var(--primary)', color: '#fff', borderRadius: '2rem', fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>
-                    Income & Expenditure Statement
-                  </div>
-                  <div style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-secondary)' }}>{dateRangeStr}</div>
-                </div>
-
-                <div className="table-responsive" style={{ border: '1px solid var(--border-color)', borderRadius: '0.5rem', overflow: 'hidden' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', backgroundColor: 'transparent' }}>
-                    <thead>
-                      <tr style={{ borderBottom: '2px solid var(--border-color)', backgroundColor: 'var(--bg-secondary)' }}>
-                        <th style={{ width: '35%', textAlign: 'left', padding: '1rem', color: 'var(--text-secondary)', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase' }}>Particulars</th>
-                        <th style={{ width: '15%', textAlign: 'right', padding: '1rem', color: 'var(--text-secondary)', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', borderRight: '1px solid var(--border-color)' }}>Amount (₹)</th>
-                        <th style={{ width: '35%', textAlign: 'left', padding: '1rem', color: 'var(--text-secondary)', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', paddingLeft: '1.5rem' }}>Particulars</th>
-                        <th style={{ width: '15%', textAlign: 'right', padding: '1rem', color: 'var(--text-secondary)', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase' }}>Amount (₹)</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr>
-                        {/* Left Column - Expenditure */}
-                        <td colSpan={2} style={{ verticalAlign: 'top', padding: 0, borderRight: '1px solid var(--border-color)' }}>
-                          <table style={{ width: '100%', borderCollapse: 'collapse', backgroundColor: 'transparent' }}>
-                            <tbody>
-                              <tr><td colSpan={2} style={{ fontWeight: 700, padding: '1rem', fontSize: '0.875rem', color: 'var(--primary)', borderBottom: '1px solid var(--border-color)', backgroundColor: 'rgba(59, 130, 246, 0.05)' }}>Direct Expenses</td></tr>
-                              {expenseItems.map((e: any, idx: number) => (
-                                <tr key={`exp-${idx}`} style={{ borderBottom: '1px solid var(--border-color)' }}>
-                                  <td style={{ padding: '0.75rem 1rem', paddingLeft: '1.5rem', fontSize: '0.875rem' }}>{e.category}</td>
-                                  <td style={{ padding: '0.75rem 1rem', textAlign: 'right', fontSize: '0.875rem', fontWeight: 500 }}>{e.amount.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
-                                </tr>
-                              ))}
-                              {netProfit > 0 && (
-                                <tr style={{ backgroundColor: 'rgba(16, 185, 129, 0.05)' }}>
-                                  <td style={{ padding: '1rem', fontWeight: 600, fontSize: '0.875rem', color: 'var(--success)' }}>Excess of Income over Expenditure</td>
-                                  <td style={{ padding: '1rem', textAlign: 'right', fontWeight: 700, fontSize: '0.875rem', color: 'var(--success)' }}>{netProfit.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
-                                </tr>
-                              )}
-                            </tbody>
-                          </table>
-                        </td>
-                        {/* Right Column - Income */}
-                        <td colSpan={2} style={{ verticalAlign: 'top', padding: 0 }}>
-                          <table style={{ width: '100%', borderCollapse: 'collapse', backgroundColor: 'transparent' }}>
-                            <tbody>
-                              <tr><td colSpan={2} style={{ fontWeight: 700, padding: '1rem', fontSize: '0.875rem', color: 'var(--primary)', borderBottom: '1px solid var(--border-color)', backgroundColor: 'rgba(59, 130, 246, 0.05)', paddingLeft: '1.5rem' }}>Direct Incomes</td></tr>
-                              {incomeItems.map((i: any, idx: number) => (
-                                <tr key={`inc-${idx}`} style={{ borderBottom: '1px solid var(--border-color)' }}>
-                                  <td style={{ padding: '0.75rem 1rem', paddingLeft: '2rem', fontSize: '0.875rem' }}>{i.category}</td>
-                                  <td style={{ padding: '0.75rem 1rem', textAlign: 'right', fontSize: '0.875rem', fontWeight: 500 }}>{i.amount.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
-                                </tr>
-                              ))}
-                              {netProfit < 0 && (
-                                <tr style={{ backgroundColor: 'rgba(239, 68, 68, 0.05)' }}>
-                                  <td style={{ padding: '1rem', paddingLeft: '2rem', fontWeight: 600, fontSize: '0.875rem', color: 'var(--error)' }}>Excess of Expenditure over Income</td>
-                                  <td style={{ padding: '1rem', textAlign: 'right', fontWeight: 700, fontSize: '0.875rem', color: 'var(--error)' }}>{Math.abs(netProfit).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
-                                </tr>
-                              )}
-                            </tbody>
-                          </table>
-                        </td>
-                      </tr>
-                    </tbody>
-                    <tfoot>
-                      <tr style={{ borderTop: '2px solid var(--border-color)', backgroundColor: 'var(--bg-secondary)', fontWeight: 700 }}>
-                        <td style={{ padding: '1rem', fontSize: '0.9rem' }}>Total</td>
-                        <td style={{ padding: '1rem', textAlign: 'right', borderRight: '1px solid var(--border-color)', fontSize: '0.9rem' }}>{pnlTotal.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
-                        <td style={{ padding: '1rem', paddingLeft: '1.5rem', fontSize: '0.9rem' }}>Total</td>
-                        <td style={{ padding: '1rem', textAlign: 'right', fontSize: '0.9rem' }}>{pnlTotal.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
-                      </tr>
-                    </tfoot>
-                  </table>
-                </div>
+              {/* Tab Selector */}
+              <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '2rem', padding: '0.25rem', backgroundColor: 'var(--bg-secondary)', borderRadius: '0.5rem', width: 'fit-content', border: '1px solid var(--border-color)' }}>
+                <button
+                  onClick={() => setReportTab('pnl')}
+                  style={{
+                    padding: '0.5rem 1.25rem',
+                    border: 'none',
+                    borderRadius: '0.375rem',
+                    cursor: 'pointer',
+                    fontWeight: 600,
+                    fontSize: '0.875rem',
+                    transition: 'all 0.2s',
+                    backgroundColor: reportTab === 'pnl' ? 'var(--card-bg)' : 'transparent',
+                    color: reportTab === 'pnl' ? 'var(--primary)' : 'var(--text-secondary)',
+                    boxShadow: reportTab === 'pnl' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                  }}
+                >
+                  Income & Expenditure
+                </button>
+                <button
+                  onClick={() => setReportTab('bs')}
+                  style={{
+                    padding: '0.5rem 1.25rem',
+                    border: 'none',
+                    borderRadius: '0.375rem',
+                    cursor: 'pointer',
+                    fontWeight: 600,
+                    fontSize: '0.875rem',
+                    transition: 'all 0.2s',
+                    backgroundColor: reportTab === 'bs' ? 'var(--card-bg)' : 'transparent',
+                    color: reportTab === 'bs' ? 'var(--primary)' : 'var(--text-secondary)',
+                    boxShadow: reportTab === 'bs' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                  }}
+                >
+                  Balance Sheet
+                </button>
               </div>
 
-              {/* Balance Sheet */}
-              <div className="card report-card" style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
-                <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+              {/* Report Body Card */}
+              <div className="card report-card" style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', padding: '2rem', border: '1px solid var(--border-color)', borderRadius: '0.75rem', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
+                
+                {/* Statement Header */}
+                <div style={{ textAlign: 'center', marginBottom: '2.5rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '2rem' }}>
                   <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
-                    <Landmark size={24} style={{ color: 'var(--primary)' }} />
-                    <h2 style={{ fontSize: '1.5rem', fontWeight: 700, margin: 0, letterSpacing: '-0.02em' }}>{user?.tenantName || 'Society Name'}</h2>
+                    <Building size={28} style={{ color: 'var(--primary)' }} />
+                    <h2 style={{ fontSize: '1.75rem', fontWeight: 800, margin: 0, letterSpacing: '-0.025em', color: 'var(--text-primary)' }}>{user?.tenantName || 'Sunrise Apartments'}</h2>
                   </div>
-                  {user?.tenantAddress && <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '0.75rem', maxWidth: '400px', margin: '0 auto 0.75rem' }}>{user.tenantAddress}</div>}
-                  <div style={{ display: 'inline-block', padding: '0.25rem 0.75rem', backgroundColor: 'var(--accent)', color: '#fff', borderRadius: '2rem', fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>
-                    Balance Sheet
+                  {user?.tenantAddress && <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '0.75rem', maxWidth: '500px', margin: '0 auto 0.75rem' }}>{user.tenantAddress}</div>}
+                  <div style={{ 
+                    display: 'inline-block', 
+                    padding: '0.35rem 1rem', 
+                    backgroundColor: reportTab === 'pnl' ? 'rgba(59, 130, 246, 0.1)' : 'rgba(124, 58, 237, 0.1)', 
+                    color: reportTab === 'pnl' ? 'var(--primary)' : 'var(--accent)', 
+                    borderRadius: '2rem', 
+                    fontSize: '0.8rem', 
+                    fontWeight: 700, 
+                    textTransform: 'uppercase', 
+                    letterSpacing: '0.05em', 
+                    marginBottom: '0.75rem' 
+                  }}>
+                    {reportTab === 'pnl' ? 'Income & Expenditure Statement' : 'Balance Sheet'}
                   </div>
-                  <div style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-secondary)' }}>as at {asAtDate}</div>
+                  <div style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-secondary)' }}>
+                    {reportTab === 'pnl' ? dateRangeStr : `as at ${asAtDate}`}
+                  </div>
                 </div>
 
-                <div className="table-responsive" style={{ border: '1px solid var(--border-color)', borderRadius: '0.5rem', overflow: 'hidden' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', backgroundColor: 'transparent' }}>
-                    <thead>
-                      <tr style={{ borderBottom: '2px solid var(--border-color)', backgroundColor: 'var(--bg-secondary)' }}>
-                        <th style={{ width: '35%', textAlign: 'left', padding: '1rem', color: 'var(--text-secondary)', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase' }}>Liabilities</th>
-                        <th style={{ width: '15%', textAlign: 'right', padding: '1rem', color: 'var(--text-secondary)', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', borderRight: '1px solid var(--border-color)' }}>as at {asAtDate}</th>
-                        <th style={{ width: '35%', textAlign: 'left', padding: '1rem', color: 'var(--text-secondary)', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', paddingLeft: '1.5rem' }}>Assets</th>
-                        <th style={{ width: '15%', textAlign: 'right', padding: '1rem', color: 'var(--text-secondary)', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase' }}>as at {asAtDate}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr>
-                        {/* Left Column - Liabilities */}
-                        <td colSpan={2} style={{ verticalAlign: 'top', padding: 0, borderRight: '1px solid var(--border-color)' }}>
-                          <table style={{ width: '100%', borderCollapse: 'collapse', backgroundColor: 'transparent' }}>
-                            <tbody>
-                              <tr><td colSpan={2} style={{ fontWeight: 700, padding: '1rem', fontSize: '0.875rem', color: 'var(--accent)', borderBottom: '1px solid var(--border-color)', backgroundColor: 'rgba(124, 58, 237, 0.05)' }}>Capital Account</td></tr>
-                              {bsLiabilities.map((l, i) => (
-                                <tr key={`liab-${i}`} style={{ borderBottom: '1px solid var(--border-color)' }}>
-                                  <td style={{ padding: '0.75rem 1rem', paddingLeft: '1.5rem', fontSize: '0.875rem' }}>{l.label}</td>
-                                  <td style={{ padding: '0.75rem 1rem', textAlign: 'right', fontSize: '0.875rem', fontWeight: 500 }}>{l.amount.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                {reportTab === 'pnl' ? (
+                  /* Income & Expenditure Statement */
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                    {/* KPI Summary Cards */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.25rem' }}>
+                      <div className="card" style={{ padding: '1.25rem', borderLeft: '4px solid var(--success)', display: 'flex', flexDirection: 'column', gap: '0.35rem', backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderLeftWidth: '4px' }}>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Income</span>
+                        <span style={{ fontSize: '1.625rem', fontWeight: 700, color: 'var(--success)' }}>₹{totalIncome.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                      </div>
+                      <div className="card" style={{ padding: '1.25rem', borderLeft: '4px solid var(--error)', display: 'flex', flexDirection: 'column', gap: '0.35rem', backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderLeftWidth: '4px' }}>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Expenditure</span>
+                        <span style={{ fontSize: '1.625rem', fontWeight: 700, color: 'var(--error)' }}>₹{totalExpenses.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                      </div>
+                      <div className="card" style={{ 
+                        padding: '1.25rem', 
+                        borderLeft: `4px solid ${netProfit >= 0 ? 'var(--success)' : 'var(--error)'}`, 
+                        backgroundColor: netProfit >= 0 ? 'rgba(16, 185, 129, 0.02)' : 'rgba(239, 68, 68, 0.02)',
+                        display: 'flex', 
+                        flexDirection: 'column', 
+                        gap: '0.35rem',
+                        border: '1px solid var(--border-color)',
+                        borderLeftWidth: '4px'
+                      }}>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Net Surplus / Deficit</span>
+                        <span style={{ fontSize: '1.625rem', fontWeight: 700, color: netProfit >= 0 ? 'var(--success)' : 'var(--error)' }}>
+                          ₹{Math.abs(netProfit).toLocaleString(undefined, {minimumFractionDigits: 2})}
+                          <span style={{ fontSize: '0.75rem', fontWeight: 500, marginLeft: '0.5rem', verticalAlign: 'middle', color: 'var(--text-secondary)' }}>
+                            ({netProfit >= 0 ? 'Surplus' : 'Deficit'})
+                          </span>
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Side-by-Side Tables Grid */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '1.5rem' }}>
+                      {/* Expenditure Table Card */}
+                      <div style={{ border: '1px solid var(--border-color)', borderRadius: '0.75rem', overflow: 'hidden', backgroundColor: 'var(--card-bg)' }}>
+                        <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid var(--border-color)', backgroundColor: 'var(--bg-secondary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <ArrowDownRight size={18} style={{ color: 'var(--error)' }} />
+                          <span style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Expenditure (Debit)</span>
+                        </div>
+                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                          <thead>
+                            <tr style={{ borderBottom: '1px solid var(--border-color)', backgroundColor: 'var(--bg-primary)' }}>
+                              <th style={{ textAlign: 'left', padding: '0.75rem 1.25rem', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', width: '70%' }}>Particulars</th>
+                              <th style={{ textAlign: 'right', padding: '0.75rem 1.25rem', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', width: '30%' }}>Amount (₹)</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {expenseItems.length === 0 ? (
+                              <tr>
+                                <td colSpan={2} style={{ padding: '2.5rem 1.25rem', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.875rem' }}>No expenses recorded</td>
+                              </tr>
+                            ) : (
+                              expenseItems.map((e: any, idx: number) => (
+                                <tr key={`exp-${idx}`} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                                  <td style={{ padding: '0.85rem 1.25rem', fontSize: '0.875rem', color: 'var(--text-primary)' }}>{e.category}</td>
+                                  <td style={{ padding: '0.85rem 1.25rem', textAlign: 'right', fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-primary)' }}>{e.amount.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
                                 </tr>
-                              ))}
-                              {netProfit > 0 && (
-                                <tr style={{ borderBottom: '1px solid var(--border-color)' }}>
-                                  <td style={{ padding: '1rem', fontWeight: 600, fontSize: '0.875rem', color: 'var(--success)', backgroundColor: 'rgba(16, 185, 129, 0.05)' }}>Profit & Loss A/c (Profit)</td>
-                                  <td style={{ padding: '1rem', textAlign: 'right', fontWeight: 700, fontSize: '0.875rem', color: 'var(--success)', backgroundColor: 'rgba(16, 185, 129, 0.05)' }}>{netProfit.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                              ))
+                            )}
+                            {netProfit > 0 && (
+                              <tr style={{ borderBottom: '1px solid var(--border-color)', backgroundColor: 'rgba(16, 185, 129, 0.03)' }}>
+                                <td style={{ padding: '0.85rem 1.25rem', fontWeight: 600, fontSize: '0.875rem', color: 'var(--success)' }}>Excess of Income over Expenditure</td>
+                                <td style={{ padding: '0.85rem 1.25rem', textAlign: 'right', fontWeight: 700, fontSize: '0.875rem', color: 'var(--success)' }}>{netProfit.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                              </tr>
+                            )}
+                          </tbody>
+                          <tfoot>
+                            <tr style={{ backgroundColor: 'var(--bg-secondary)', fontWeight: 700, borderTop: '2px solid var(--border-color)' }}>
+                              <td style={{ padding: '1rem 1.25rem', fontSize: '0.875rem', color: 'var(--text-primary)' }}>Total</td>
+                              <td style={{ padding: '1rem 1.25rem', textAlign: 'right', fontSize: '0.875rem', color: 'var(--text-primary)' }}>{pnlTotal.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                            </tr>
+                          </tfoot>
+                        </table>
+                      </div>
+
+                      {/* Income Table Card */}
+                      <div style={{ border: '1px solid var(--border-color)', borderRadius: '0.75rem', overflow: 'hidden', backgroundColor: 'var(--card-bg)' }}>
+                        <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid var(--border-color)', backgroundColor: 'var(--bg-secondary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <ArrowUpRight size={18} style={{ color: 'var(--success)' }} />
+                          <span style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Income (Credit)</span>
+                        </div>
+                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                          <thead>
+                            <tr style={{ borderBottom: '1px solid var(--border-color)', backgroundColor: 'var(--bg-primary)' }}>
+                              <th style={{ textAlign: 'left', padding: '0.75rem 1.25rem', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', width: '70%' }}>Particulars</th>
+                              <th style={{ textAlign: 'right', padding: '0.75rem 1.25rem', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', width: '30%' }}>Amount (₹)</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {incomeItems.length === 0 ? (
+                              <tr>
+                                <td colSpan={2} style={{ padding: '2.5rem 1.25rem', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.875rem' }}>No income recorded</td>
+                              </tr>
+                            ) : (
+                              incomeItems.map((i: any, idx: number) => (
+                                <tr key={`inc-${idx}`} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                                  <td style={{ padding: '0.85rem 1.25rem', fontSize: '0.875rem', color: 'var(--text-primary)' }}>{i.category}</td>
+                                  <td style={{ padding: '0.85rem 1.25rem', textAlign: 'right', fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-primary)' }}>{i.amount.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
                                 </tr>
-                              )}
-                            </tbody>
-                          </table>
-                        </td>
-                        {/* Right Column - Assets */}
-                        <td colSpan={2} style={{ verticalAlign: 'top', padding: 0 }}>
-                          <table style={{ width: '100%', borderCollapse: 'collapse', backgroundColor: 'transparent' }}>
-                            <tbody>
-                              <tr><td colSpan={2} style={{ fontWeight: 700, padding: '1rem', fontSize: '0.875rem', color: 'var(--accent)', borderBottom: '1px solid var(--border-color)', backgroundColor: 'rgba(124, 58, 237, 0.05)', paddingLeft: '1.5rem' }}>Current Assets</td></tr>
-                              {bsAssets.map((a, i) => (
-                                <tr key={`asset-${i}`} style={{ borderBottom: '1px solid var(--border-color)' }}>
-                                  <td style={{ padding: '0.75rem 1rem', paddingLeft: '2rem', fontSize: '0.875rem' }}>{a.label}</td>
-                                  <td style={{ padding: '0.75rem 1rem', textAlign: 'right', fontSize: '0.875rem', fontWeight: 500 }}>{a.amount.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
-                                </tr>
-                              ))}
-                              {netProfit < 0 && (
-                                <tr style={{ borderBottom: '1px solid var(--border-color)' }}>
-                                  <td style={{ padding: '1rem', paddingLeft: '2rem', fontWeight: 600, fontSize: '0.875rem', color: 'var(--error)', backgroundColor: 'rgba(239, 68, 68, 0.05)' }}>Profit & Loss A/c (Loss)</td>
-                                  <td style={{ padding: '1rem', textAlign: 'right', fontWeight: 700, fontSize: '0.875rem', color: 'var(--error)', backgroundColor: 'rgba(239, 68, 68, 0.05)' }}>{Math.abs(netProfit).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
-                                </tr>
-                              )}
-                            </tbody>
-                          </table>
-                        </td>
-                      </tr>
-                    </tbody>
-                    <tfoot>
-                      <tr style={{ borderTop: '2px solid var(--border-color)', backgroundColor: 'var(--bg-secondary)', fontWeight: 700 }}>
-                        <td style={{ padding: '1rem', fontSize: '0.9rem' }}>Total</td>
-                        <td style={{ padding: '1rem', textAlign: 'right', borderRight: '1px solid var(--border-color)', fontSize: '0.9rem' }}>{bsTotal.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
-                        <td style={{ padding: '1rem', paddingLeft: '1.5rem', fontSize: '0.9rem' }}>Total</td>
-                        <td style={{ padding: '1rem', textAlign: 'right', fontSize: '0.9rem' }}>{bsTotal.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
-                      </tr>
-                    </tfoot>
-                  </table>
-                </div>
+                              ))
+                            )}
+                            {netProfit < 0 && (
+                              <tr style={{ borderBottom: '1px solid var(--border-color)', backgroundColor: 'rgba(239, 68, 68, 0.03)' }}>
+                                <td style={{ padding: '0.85rem 1.25rem', fontWeight: 600, fontSize: '0.875rem', color: 'var(--error)' }}>Excess of Expenditure over Income</td>
+                                <td style={{ padding: '0.85rem 1.25rem', textAlign: 'right', fontWeight: 700, fontSize: '0.875rem', color: 'var(--error)' }}>{Math.abs(netProfit).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                              </tr>
+                            )}
+                          </tbody>
+                          <tfoot>
+                            <tr style={{ backgroundColor: 'var(--bg-secondary)', fontWeight: 700, borderTop: '2px solid var(--border-color)' }}>
+                              <td style={{ padding: '1rem 1.25rem', fontSize: '0.875rem', color: 'var(--text-primary)' }}>Total</td>
+                              <td style={{ padding: '1rem 1.25rem', textAlign: 'right', fontSize: '0.875rem', color: 'var(--text-primary)' }}>{pnlTotal.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                            </tr>
+                          </tfoot>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  /* Balance Sheet */
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                    {/* Side-by-Side Tables Grid */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '1.5rem' }}>
+                      {/* Liabilities Table Card */}
+                      <div style={{ border: '1px solid var(--border-color)', borderRadius: '0.75rem', overflow: 'hidden', backgroundColor: 'var(--card-bg)' }}>
+                        <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid var(--border-color)', backgroundColor: 'var(--bg-secondary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <Landmark size={18} style={{ color: 'var(--accent)' }} />
+                          <span style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Liabilities & Equity</span>
+                        </div>
+                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                          <thead>
+                            <tr style={{ borderBottom: '1px solid var(--border-color)', backgroundColor: 'var(--bg-primary)' }}>
+                              <th style={{ textAlign: 'left', padding: '0.75rem 1.25rem', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', width: '70%' }}>Particulars</th>
+                              <th style={{ textAlign: 'right', padding: '0.75rem 1.25rem', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', width: '30%' }}>Amount (₹)</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr style={{ backgroundColor: 'var(--bg-primary)' }}>
+                              <td colSpan={2} style={{ fontWeight: 700, padding: '0.5rem 1.25rem', fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Capital Accounts</td>
+                            </tr>
+                            {bsLiabilities.map((l, i) => (
+                              <tr key={`liab-${i}`} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                                <td style={{ padding: '0.85rem 1.25rem', paddingLeft: '2rem', fontSize: '0.875rem', color: 'var(--text-primary)' }}>{l.label}</td>
+                                <td style={{ padding: '0.85rem 1.25rem', textAlign: 'right', fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-primary)' }}>{l.amount.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                              </tr>
+                            ))}
+                            {netProfit > 0 && (
+                              <tr style={{ borderBottom: '1px solid var(--border-color)', backgroundColor: 'rgba(16, 185, 129, 0.03)' }}>
+                                <td style={{ padding: '0.85rem 1.25rem', paddingLeft: '2rem', fontWeight: 600, fontSize: '0.875rem', color: 'var(--success)' }}>Profit & Loss A/c (Profit)</td>
+                                <td style={{ padding: '0.85rem 1.25rem', textAlign: 'right', fontWeight: 700, fontSize: '0.875rem', color: 'var(--success)' }}>{netProfit.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                              </tr>
+                            )}
+                          </tbody>
+                          <tfoot>
+                            <tr style={{ backgroundColor: 'var(--bg-secondary)', fontWeight: 700, borderTop: '2px solid var(--border-color)' }}>
+                              <td style={{ padding: '1rem 1.25rem', fontSize: '0.875rem', color: 'var(--text-primary)' }}>Total Liabilities & Equity</td>
+                              <td style={{ padding: '1rem 1.25rem', textAlign: 'right', fontSize: '0.875rem', color: 'var(--text-primary)' }}>{bsTotal.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                            </tr>
+                          </tfoot>
+                        </table>
+                      </div>
+
+                      {/* Assets Table Card */}
+                      <div style={{ border: '1px solid var(--border-color)', borderRadius: '0.75rem', overflow: 'hidden', backgroundColor: 'var(--card-bg)' }}>
+                        <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid var(--border-color)', backgroundColor: 'var(--bg-secondary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <Landmark size={18} style={{ color: 'var(--accent)' }} />
+                          <span style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Assets</span>
+                        </div>
+                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                          <thead>
+                            <tr style={{ borderBottom: '1px solid var(--border-color)', backgroundColor: 'var(--bg-primary)' }}>
+                              <th style={{ textAlign: 'left', padding: '0.75rem 1.25rem', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', width: '70%' }}>Particulars</th>
+                              <th style={{ textAlign: 'right', padding: '0.75rem 1.25rem', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', width: '30%' }}>Amount (₹)</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr style={{ backgroundColor: 'var(--bg-primary)' }}>
+                              <td colSpan={2} style={{ fontWeight: 700, padding: '0.5rem 1.25rem', fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Current Assets</td>
+                            </tr>
+                            {bsAssets.map((a, i) => (
+                              <tr key={`asset-${i}`} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                                <td style={{ padding: '0.85rem 1.25rem', paddingLeft: '2rem', fontSize: '0.875rem', color: 'var(--text-primary)' }}>{a.label}</td>
+                                <td style={{ padding: '0.85rem 1.25rem', textAlign: 'right', fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-primary)' }}>{a.amount.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                              </tr>
+                            ))}
+                            {netProfit < 0 && (
+                              <tr style={{ borderBottom: '1px solid var(--border-color)', backgroundColor: 'rgba(239, 68, 68, 0.03)' }}>
+                                <td style={{ padding: '0.85rem 1.25rem', paddingLeft: '2rem', fontWeight: 600, fontSize: '0.875rem', color: 'var(--error)' }}>Profit & Loss A/c (Loss)</td>
+                                <td style={{ padding: '0.85rem 1.25rem', textAlign: 'right', fontWeight: 700, fontSize: '0.875rem', color: 'var(--error)' }}>{Math.abs(netProfit).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                              </tr>
+                            )}
+                          </tbody>
+                          <tfoot>
+                            <tr style={{ backgroundColor: 'var(--bg-secondary)', fontWeight: 700, borderTop: '2px solid var(--border-color)' }}>
+                              <td style={{ padding: '1rem 1.25rem', fontSize: '0.875rem', color: 'var(--text-primary)' }}>Total Assets</td>
+                              <td style={{ padding: '1rem 1.25rem', textAlign: 'right', fontSize: '0.875rem', color: 'var(--text-primary)' }}>{bsTotal.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                            </tr>
+                          </tfoot>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
