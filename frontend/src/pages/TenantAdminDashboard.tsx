@@ -1593,8 +1593,8 @@ const TenantAdminDashboard = () => {
                         {m.mobile}
                       </td>
                       <td>
-                        <span style={{ fontWeight: 600, color: m.outstandingDues > 0 ? 'var(--error)' : 'var(--success)' }}>
-                          ₹{m.outstandingDues?.toLocaleString()}
+                        <span style={{ fontWeight: 600, color: (m.totalDues !== undefined ? m.totalDues : m.outstandingDues) > 0 ? 'var(--error)' : 'var(--success)' }}>
+                          ₹{(m.totalDues !== undefined ? m.totalDues : m.outstandingDues)?.toLocaleString()}
                         </span>
                       </td>
                       <td><span className={`badge ${m.status === 'ACTIVE' ? 'badge-success' : 'badge-error'}`}>{m.status}</span></td>
@@ -2259,7 +2259,8 @@ const TenantAdminDashboard = () => {
                 </thead>
                 <tbody>
                   {upcomingMembers.map((m: any) => {
-                    const hasDues = m.outstandingDues > 0;
+                    const displayDues = m.totalDues !== undefined ? m.totalDues : m.outstandingDues;
+                    const hasDues = displayDues > 0;
                     const isOverdue = m.paidUntil ? (new Date(m.paidUntil) < new Date() || hasDues) : true;
                     return (
                       <tr key={m.id}>
@@ -2273,11 +2274,11 @@ const TenantAdminDashboard = () => {
                         </td>
                         <td>
                           <span style={{ fontWeight: 600, color: hasDues ? 'var(--error)' : 'var(--success)' }}>
-                            ₹{m.outstandingDues?.toLocaleString()}
+                            ₹{displayDues?.toLocaleString()}
                           </span>
                         </td>
                         <td>
-                          {hasDues
+                          {m.outstandingDues > 0
                             ? <span className="badge badge-error">Outstanding Dues</span>
                             : isOverdue 
                             ? <span className="badge badge-error">Overdue</span>
@@ -2615,7 +2616,7 @@ const TenantAdminDashboard = () => {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginBottom: '1.5rem' }}>
                   {[
                     { label: 'Total Paid', value: `₹${payments.filter((p: any) => p.memberId === selectedMember.id && p.status === 'PAID').reduce((s: number, p: any) => s + p.amount, 0).toLocaleString()}`, color: 'var(--success)' },
-                    { label: 'Outstanding', value: `₹${selectedMember.outstandingDues?.toLocaleString()}`, color: selectedMember.outstandingDues > 0 ? 'var(--error)' : 'var(--success)' },
+                    { label: 'Outstanding', value: `₹${(selectedMember.totalDues !== undefined ? selectedMember.totalDues : selectedMember.outstandingDues)?.toLocaleString()}`, color: (selectedMember.totalDues !== undefined ? selectedMember.totalDues : selectedMember.outstandingDues) > 0 ? 'var(--error)' : 'var(--success)' },
                     { label: 'Receipts', value: payments.filter((p: any) => p.memberId === selectedMember.id).length, color: 'var(--primary)' },
                   ].map(({ label, value, color }) => (
                     <div key={label} style={{ backgroundColor: 'var(--bg-secondary)', padding: '1rem', borderRadius: '0.75rem', textAlign: 'center' }}>
@@ -2893,7 +2894,7 @@ const TenantAdminDashboard = () => {
                       }}>
                         <option value="">-- Choose Member --</option>
                         {members.map((m: any) => (
-                          <option key={m.id} value={m.id}>{m.flatNo} - {m.name} (Due: ₹{m.outstandingDues})</option>
+                          <option key={m.id} value={m.id}>{m.flatNo} - {m.name} (Due: ₹{m.totalDues !== undefined ? m.totalDues : m.outstandingDues})</option>
                         ))}
                       </select>
                     </div>

@@ -34,13 +34,23 @@ router.get("/profile", authorize(["MEMBER"]), async (req: any, res) => {
       return res.status(404).json({ message: "Member profile not found" });
     }
     
-    res.json(member);
+    let additionalDues = 0;
+    if (member.paidUntil) {
+      const d = new Date(member.paidUntil);
+      const paidUntilStr = `${d.getUTCFullYear()}-${(d.getUTCMonth() + 1).toString().padStart(2, '0')}-${d.getUTCDate().toString().padStart(2, '0')}`;
+      additionalDues = await calculateDues(prisma, member.tenantId, paidUntilStr, member.defaultTenure);
+    }
+    
+    res.json({
+      ...member,
+      totalDues: (member.outstandingDues || 0) + additionalDues
+    });
   } catch (error) {
     res.status(500).json({ message: "Error fetching profile", error });
   }
 });
 
-function getFinancialYearForDate(date: Date): string {
+export function getFinancialYearForDate(date: Date): string {
   const year = date.getUTCFullYear();
   const month = date.getUTCMonth();
   const startYear = month >= 3 ? year : year - 1;
@@ -48,7 +58,7 @@ function getFinancialYearForDate(date: Date): string {
   return `${startYear}-${endYear.toString().padStart(2, '0')}`;
 }
 
-async function calculateDues(
+export async function calculateDues(
   tx: any,
   tenantId: string,
   paidUntilStr: string,
@@ -155,7 +165,23 @@ router.get("/", authorize(["TENANT_ADMIN"]), async (req: any, res) => {
   const members = await prisma.member.findMany({
     where: { tenantId: req.user.tenantId },
   });
-  res.json(members);
+  
+  const enrichedMembers = await Promise.all(
+    members.map(async (m) => {
+      let additionalDues = 0;
+      if (m.paidUntil) {
+        const d = new Date(m.paidUntil);
+        const paidUntilStr = `${d.getUTCFullYear()}-${(d.getUTCMonth() + 1).toString().padStart(2, '0')}-${d.getUTCDate().toString().padStart(2, '0')}`;
+        additionalDues = await calculateDues(prisma, req.user.tenantId, paidUntilStr, m.defaultTenure);
+      }
+      return {
+        ...m,
+        totalDues: (m.outstandingDues || 0) + additionalDues
+      };
+    })
+  );
+  
+  res.json(enrichedMembers);
 });
 
 router.post("/", authorize(["TENANT_ADMIN"]), async (req: any, res) => {

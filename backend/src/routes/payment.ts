@@ -1,6 +1,7 @@
 import express from "express";
 import prisma from "../utils/prisma";
 import { authenticate, authorize } from "../middleware/auth";
+import { calculateDues } from "./member";
 
 const router = express.Router();
 
@@ -124,8 +125,23 @@ router.get("/upcoming", authorize(["TENANT_ADMIN"]), async (req: any, res) => {
       },
       orderBy: { flatNo: 'asc' }
     });
+
+    const enrichedMembers = await Promise.all(
+      upcomingMembers.map(async (m) => {
+        let additionalDues = 0;
+        if (m.paidUntil) {
+          const d = new Date(m.paidUntil);
+          const paidUntilStr = `${d.getUTCFullYear()}-${(d.getUTCMonth() + 1).toString().padStart(2, '0')}-${d.getUTCDate().toString().padStart(2, '0')}`;
+          additionalDues = await calculateDues(prisma, req.user.tenantId, paidUntilStr, m.defaultTenure);
+        }
+        return {
+          ...m,
+          totalDues: (m.outstandingDues || 0) + additionalDues
+        };
+      })
+    );
     
-    res.json(upcomingMembers);
+    res.json(enrichedMembers);
   } catch (error: any) {
     res.status(500).json({ message: "Error fetching upcoming dues", error: error.message });
   }

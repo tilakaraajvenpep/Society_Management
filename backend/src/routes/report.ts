@@ -1,6 +1,7 @@
 import express from "express";
 import prisma from "../utils/prisma";
 import { authenticate, authorize } from "../middleware/auth";
+import { calculateDues } from "./member";
 
 const router = express.Router();
 router.use(authenticate);
@@ -15,10 +16,9 @@ router.get("/summary", authorize(["TENANT_ADMIN"]), async (req: any, res) => {
     const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
 
     // --- Totals ---
-    const [totalIncomeAgg, totalExpensesAgg, outstandingAgg, tenantInfo] = await Promise.all([
+    const [totalIncomeAgg, totalExpensesAgg, tenantInfo, members] = await Promise.all([
       prisma.payment.aggregate({ where: { tenantId }, _sum: { amount: true } }),
       prisma.expense.aggregate({ where: { tenantId }, _sum: { amount: true } }),
-      prisma.member.aggregate({ where: { tenantId }, _sum: { outstandingDues: true } }),
       prisma.tenant.findUnique({ 
         where: { id: tenantId }, 
         select: { 
@@ -29,7 +29,25 @@ router.get("/summary", authorize(["TENANT_ADMIN"]), async (req: any, res) => {
           enableForums: true
         } as any 
       }),
+      prisma.member.findMany({ where: { tenantId } }),
     ]);
+
+    let totalOutstanding = 0;
+    let membersWithDuesCount = 0;
+    
+    for (const m of members) {
+      let additionalDues = 0;
+      if (m.paidUntil) {
+        const d = new Date(m.paidUntil);
+        const paidUntilStr = `${d.getUTCFullYear()}-${(d.getUTCMonth() + 1).toString().padStart(2, '0')}-${d.getUTCDate().toString().padStart(2, '0')}`;
+        additionalDues = await calculateDues(prisma, tenantId, paidUntilStr, m.defaultTenure);
+      }
+      const totalM = (m.outstandingDues || 0) + additionalDues;
+      if (totalM > 0) {
+        totalOutstanding += totalM;
+        membersWithDuesCount += 1;
+      }
+    }
 
     // --- This month vs last month ---
     const [thisMonthIncome, lastMonthIncome, thisMonthExpenses, lastMonthExpenses] = await Promise.all([
@@ -76,10 +94,7 @@ router.get("/summary", authorize(["TENANT_ADMIN"]), async (req: any, res) => {
     });
 
     // --- Members summary ---
-    const [totalMembers, membersWithDues] = await Promise.all([
-      prisma.member.count({ where: { tenantId } }),
-      prisma.member.count({ where: { tenantId, outstandingDues: { gt: 0 } } }),
-    ]);
+    const totalMembers = await prisma.member.count({ where: { tenantId } });
 
     const totalIncome = totalIncomeAgg._sum.amount || 0;
     const totalExpenses = totalExpensesAgg._sum.amount || 0;
@@ -88,7 +103,7 @@ router.get("/summary", authorize(["TENANT_ADMIN"]), async (req: any, res) => {
       // Totals
       totalIncome,
       totalExpenses,
-      totalOutstanding: outstandingAgg._sum.outstandingDues || 0,
+      totalOutstanding,
       netBalance: totalIncome - totalExpenses,
       totalCashInHand,
       // This month
@@ -100,7 +115,7 @@ router.get("/summary", authorize(["TENANT_ADMIN"]), async (req: any, res) => {
       lastMonthExpenses: lastMonthExpenses._sum.amount || 0,
       // Members
       totalMembers,
-      membersWithDues,
+      membersWithDues: membersWithDuesCount,
       // Settings
       maintenanceAmount: (tenantInfo as any)?.maintenanceAmount || 0,
       quarterlyAmount: (tenantInfo as any)?.quarterlyAmount || null,

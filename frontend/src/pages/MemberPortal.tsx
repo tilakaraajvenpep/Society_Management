@@ -465,11 +465,11 @@ const MemberPortal = () => {
                   </div>
                   <span style={{ fontWeight: 600, color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Current Dues</span>
                 </div>
-                <div style={{ fontSize: '1.75rem', fontWeight: 700, color: (memberInfo?.outstandingDues || 0) > 0 ? 'var(--error)' : 'var(--success)' }}>
-                  ₹{(memberInfo?.outstandingDues || 0).toLocaleString()}
+                <div style={{ fontSize: '1.75rem', fontWeight: 700, color: (memberInfo?.totalDues !== undefined ? memberInfo.totalDues : memberInfo?.outstandingDues || 0) > 0 ? 'var(--error)' : 'var(--success)' }}>
+                  ₹{(memberInfo?.totalDues !== undefined ? memberInfo.totalDues : memberInfo?.outstandingDues || 0).toLocaleString()}
                 </div>
                 <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.5rem' }}>
-                  {(memberInfo?.outstandingDues || 0) > 0 ? 'Please pay at the society office.' : 'No outstanding dues!'}
+                  {(memberInfo?.totalDues !== undefined ? memberInfo.totalDues : memberInfo?.outstandingDues || 0) > 0 ? 'Please pay at the society office.' : 'No outstanding dues!'}
                 </p>
               </div>
 
