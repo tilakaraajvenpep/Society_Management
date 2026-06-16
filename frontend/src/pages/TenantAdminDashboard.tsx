@@ -1982,82 +1982,106 @@ const TenantAdminDashboard = () => {
                     </div>
                   </div>
                 ) : (
-                  /* Balance Sheet */
+                  /* Balance Sheet - Traditional T-Account Format */
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-                    {/* Side-by-Side Tables Grid */}
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '1.5rem' }}>
-                      {/* Liabilities Table Card */}
-                      <div style={{ border: '1px solid var(--border-color)', borderRadius: '0.75rem', overflow: 'hidden', backgroundColor: 'var(--card-bg)' }}>
-                        <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid var(--border-color)', backgroundColor: 'var(--bg-secondary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                          <Landmark size={18} style={{ color: 'var(--accent)' }} />
-                          <span style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Liabilities & Equity</span>
-                        </div>
-                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <div style={{ border: '1px solid var(--border-color)', borderRadius: '0.75rem', overflow: 'hidden', backgroundColor: 'var(--card-bg)', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
+                      <div className="table-responsive" style={{ margin: 0 }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+                          <colgroup>
+                            <col style={{ width: '38%' }} />
+                            <col style={{ width: '12%' }} />
+                            <col style={{ width: '38%' }} />
+                            <col style={{ width: '12%' }} />
+                          </colgroup>
                           <thead>
-                            <tr style={{ borderBottom: '1px solid var(--border-color)', backgroundColor: 'var(--bg-primary)' }}>
-                              <th style={{ textAlign: 'left', padding: '0.75rem 1.25rem', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', width: '70%' }}>Particulars</th>
-                              <th style={{ textAlign: 'right', padding: '0.75rem 1.25rem', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', width: '30%' }}>Amount (₹)</th>
+                            <tr style={{ borderBottom: '2px solid var(--border-color)', backgroundColor: 'var(--bg-primary)' }}>
+                              <th style={{ textAlign: 'left', padding: '1rem 1.25rem', fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Liabilities</th>
+                              <th style={{ textAlign: 'right', padding: '1rem 1.25rem', fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-secondary)', borderRight: '2px solid var(--border-color)', textTransform: 'uppercase' }}>Rs.</th>
+                              <th style={{ textAlign: 'left', padding: '1rem 1.25rem', fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Assets</th>
+                              <th style={{ textAlign: 'right', padding: '1rem 1.25rem', fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Rs.</th>
                             </tr>
                           </thead>
                           <tbody>
-                            <tr style={{ backgroundColor: 'var(--bg-primary)' }}>
-                              <td colSpan={2} style={{ fontWeight: 700, padding: '0.5rem 1.25rem', fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Capital Accounts</td>
-                            </tr>
-                            {bsLiabilities.map((l, i) => (
-                              <tr key={`liab-${i}`} style={{ borderBottom: '1px solid var(--border-color)' }}>
-                                <td style={{ padding: '0.85rem 1.25rem', paddingLeft: '2rem', fontSize: '0.875rem', color: 'var(--text-primary)' }}>{l.label}</td>
-                                <td style={{ padding: '0.85rem 1.25rem', textAlign: 'right', fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-primary)' }}>{l.amount.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
-                              </tr>
-                            ))}
-                            {netProfit > 0 && (
-                              <tr style={{ borderBottom: '1px solid var(--border-color)', backgroundColor: 'rgba(16, 185, 129, 0.03)' }}>
-                                <td style={{ padding: '0.85rem 1.25rem', paddingLeft: '2rem', fontWeight: 600, fontSize: '0.875rem', color: 'var(--success)' }}>Profit & Loss A/c (Profit)</td>
-                                <td style={{ padding: '0.85rem 1.25rem', textAlign: 'right', fontWeight: 700, fontSize: '0.875rem', color: 'var(--success)' }}>{netProfit.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
-                              </tr>
-                            )}
-                          </tbody>
-                          <tfoot>
-                            <tr style={{ backgroundColor: 'var(--bg-secondary)', fontWeight: 700, borderTop: '2px solid var(--border-color)' }}>
-                              <td style={{ padding: '1rem 1.25rem', fontSize: '0.875rem', color: 'var(--text-primary)' }}>Total Liabilities & Equity</td>
-                              <td style={{ padding: '1rem 1.25rem', textAlign: 'right', fontSize: '0.875rem', color: 'var(--text-primary)' }}>{bsTotal.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
-                            </tr>
-                          </tfoot>
-                        </table>
-                      </div>
+                            {(() => {
+                              const bsLiabilitiesRows = [
+                                { isHeader: true, label: 'Capital:' },
+                                { label: 'Opening Balance', amount: financials?.balanceSheet?.liabilities?.corpusFunds || 0 },
+                                { label: 'Add: Net Profit', amount: netProfit > 0 ? netProfit : 0 },
+                                { label: '(Less: Net Loss)', amount: netProfit < 0 ? Math.abs(netProfit) : 0 },
+                                { label: 'Less: Drawings', amount: 0 },
+                                { isHeader: true, label: 'Long-term Liabilities:' },
+                                { label: 'Loan', amount: 0 },
+                                { isHeader: true, label: 'Current liabilities:' },
+                                { label: 'Income received-in-advance', amount: 0 },
+                                { label: 'Sundry Creditors', amount: 0 },
+                                { label: 'Outstanding Expenses', amount: 0 },
+                                { label: 'Bills Payable', amount: 0 },
+                                { label: 'Bank Overdraft', amount: 0 }
+                              ];
 
-                      {/* Assets Table Card */}
-                      <div style={{ border: '1px solid var(--border-color)', borderRadius: '0.75rem', overflow: 'hidden', backgroundColor: 'var(--card-bg)' }}>
-                        <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid var(--border-color)', backgroundColor: 'var(--bg-secondary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                          <Landmark size={18} style={{ color: 'var(--accent)' }} />
-                          <span style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Assets</span>
-                        </div>
-                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                          <thead>
-                            <tr style={{ borderBottom: '1px solid var(--border-color)', backgroundColor: 'var(--bg-primary)' }}>
-                              <th style={{ textAlign: 'left', padding: '0.75rem 1.25rem', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', width: '70%' }}>Particulars</th>
-                              <th style={{ textAlign: 'right', padding: '0.75rem 1.25rem', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', width: '30%' }}>Amount (₹)</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            <tr style={{ backgroundColor: 'var(--bg-primary)' }}>
-                              <td colSpan={2} style={{ fontWeight: 700, padding: '0.5rem 1.25rem', fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Current Assets</td>
-                            </tr>
-                            {bsAssets.map((a, i) => (
-                              <tr key={`asset-${i}`} style={{ borderBottom: '1px solid var(--border-color)' }}>
-                                <td style={{ padding: '0.85rem 1.25rem', paddingLeft: '2rem', fontSize: '0.875rem', color: 'var(--text-primary)' }}>{a.label}</td>
-                                <td style={{ padding: '0.85rem 1.25rem', textAlign: 'right', fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-primary)' }}>{a.amount.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
-                              </tr>
-                            ))}
-                            {netProfit < 0 && (
-                              <tr style={{ borderBottom: '1px solid var(--border-color)', backgroundColor: 'rgba(239, 68, 68, 0.03)' }}>
-                                <td style={{ padding: '0.85rem 1.25rem', paddingLeft: '2rem', fontWeight: 600, fontSize: '0.875rem', color: 'var(--error)' }}>Profit & Loss A/c (Loss)</td>
-                                <td style={{ padding: '0.85rem 1.25rem', textAlign: 'right', fontWeight: 700, fontSize: '0.875rem', color: 'var(--error)' }}>{Math.abs(netProfit).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
-                              </tr>
-                            )}
+                              const bsAssetsRows = [
+                                { isHeader: true, label: 'Fixed Assets:' },
+                                { label: 'Good will', amount: 0 },
+                                { label: 'Land', amount: 0 },
+                                { label: 'Building', amount: 0 },
+                                { label: 'Plant & Machinery', amount: 0 },
+                                { label: 'Furniture & Fixtures', amount: 0 },
+                                { isHeader: true, label: 'Investment:' },
+                                { label: 'Investments', amount: 0 },
+                                { isHeader: true, label: 'Current Assets:' },
+                                { label: 'Closing stock', amount: 0 },
+                                { label: 'Accrued income', amount: 0 },
+                                { label: 'Prepaid expenses', amount: 0 },
+                                { label: 'Sundry Debtors', amount: financials?.balanceSheet?.assets?.duesReceivable || 0 },
+                                { label: 'Bills Receivable', amount: 0 },
+                                { label: 'Cash at Bank', amount: financials?.balanceSheet?.assets?.bankBalance || 0 },
+                                { label: 'Cash in Hand', amount: financials?.balanceSheet?.assets?.cashInHand || 0 }
+                              ];
+
+                              const totalRows = Math.max(bsLiabilitiesRows.length, bsAssetsRows.length);
+                              return Array.from({ length: totalRows }).map((_, i) => {
+                                const liab = bsLiabilitiesRows[i];
+                                const asset = bsAssetsRows[i];
+
+                                return (
+                                  <tr key={`bs-row-${i}`} style={{ borderBottom: '1px solid var(--border-color)', verticalAlign: 'top' }}>
+                                    {/* Liabilities Side */}
+                                    <td style={{ padding: '0.85rem 1.25rem', fontSize: '0.875rem', color: 'var(--text-primary)', paddingLeft: liab && !liab.isHeader ? '2rem' : '1.25rem' }}>
+                                      {liab ? (
+                                        liab.isHeader ? (
+                                          <strong>{liab.label}</strong>
+                                        ) : (
+                                          <span>{liab.label}</span>
+                                        )
+                                      ) : ''}
+                                    </td>
+                                    <td style={{ padding: '0.85rem 1.25rem', textAlign: 'right', fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-primary)', borderRight: '2px solid var(--border-color)', whiteSpace: 'nowrap' }}>
+                                      {liab && !liab.isHeader ? liab.amount.toLocaleString(undefined, {minimumFractionDigits: 2}) : ''}
+                                    </td>
+
+                                    {/* Assets Side */}
+                                    <td style={{ padding: '0.85rem 1.25rem', fontSize: '0.875rem', color: 'var(--text-primary)', paddingLeft: asset && !asset.isHeader ? '2rem' : '1.25rem' }}>
+                                      {asset ? (
+                                        asset.isHeader ? (
+                                          <strong>{asset.label}</strong>
+                                        ) : (
+                                          <span>{asset.label}</span>
+                                        )
+                                      ) : ''}
+                                    </td>
+                                    <td style={{ padding: '0.85rem 1.25rem', textAlign: 'right', fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
+                                      {asset && !asset.isHeader ? asset.amount.toLocaleString(undefined, {minimumFractionDigits: 2}) : ''}
+                                    </td>
+                                  </tr>
+                                );
+                              });
+                            })()}
                           </tbody>
                           <tfoot>
-                            <tr style={{ backgroundColor: 'var(--bg-secondary)', fontWeight: 700, borderTop: '2px solid var(--border-color)' }}>
-                              <td style={{ padding: '1rem 1.25rem', fontSize: '0.875rem', color: 'var(--text-primary)' }}>Total Assets</td>
+                            <tr style={{ backgroundColor: 'var(--bg-secondary)', fontWeight: 700, borderTop: '2px solid var(--border-color)', borderBottom: '3px double var(--border-color)' }}>
+                              <td style={{ padding: '1rem 1.25rem', fontSize: '0.875rem', color: 'var(--text-primary)' }}>Total</td>
+                              <td style={{ padding: '1rem 1.25rem', textAlign: 'right', fontSize: '0.875rem', color: 'var(--text-primary)', borderRight: '2px solid var(--border-color)' }}>{bsTotal.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                              <td style={{ padding: '1rem 1.25rem', fontSize: '0.875rem', color: 'var(--text-primary)' }}>Total</td>
                               <td style={{ padding: '1rem 1.25rem', textAlign: 'right', fontSize: '0.875rem', color: 'var(--text-primary)' }}>{bsTotal.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
                             </tr>
                           </tfoot>
