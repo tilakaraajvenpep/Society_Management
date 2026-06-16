@@ -425,7 +425,7 @@ const MemberPortal = () => {
           const fyStr = `${startYr}-${((startYr + 1) % 100).toString().padStart(2, '0')}`;
           
           const configuredCost = memberInfo?.tenant?.maintenanceCosts?.find((c: any) => c.financialYear === fyStr);
-          const amount = configuredCost ? configuredCost.amount : ((memberInfo?.tenant?.maintenanceAmount || 0) * 12);
+          const amount = configuredCost ? configuredCost.amount : null;
           
           return {
             id: configuredCost?.id || fyStr,
@@ -436,14 +436,38 @@ const MemberPortal = () => {
         });
 
         const isYearPaid = (startYear: number) => {
-          if (!memberInfo?.paidUntil) return false;
-          const paidUntilDate = new Date(memberInfo.paidUntil);
-          const paidYear = paidUntilDate.getUTCFullYear();
-          const paidMonth = paidUntilDate.getUTCMonth(); // 0-11
+          const fyStr = `${startYear}-${((startYear + 1) % 100).toString().padStart(2, '0')}`;
           
-          const targetYear = startYear + 1;
-          if (paidYear > targetYear) return true;
-          if (paidYear === targetYear && paidMonth >= 2) return true;
+          // 1. First check payment history whether a payment has been received in the member name for that year
+          if (memberInfo?.payments && memberInfo.payments.length > 0) {
+            // Check if any payment's periodLabel contains the financial year string
+            const hasMatchingLabel = memberInfo.payments.some((p: any) => {
+              if (!p.periodLabel) return false;
+              return p.periodLabel.toLowerCase().includes(fyStr.toLowerCase());
+            });
+            if (hasMatchingLabel) return true;
+
+            // Check if any payment's paymentDate falls within this financial year (April 1 of startYear to March 31 of startYear + 1)
+            const fyStart = new Date(`${startYear}-04-01T00:00:00Z`);
+            const fyEnd = new Date(`${startYear + 1}-03-31T23:59:59Z`);
+            const hasPaymentInYear = memberInfo.payments.some((p: any) => {
+              const pDate = new Date(p.paymentDate);
+              return pDate >= fyStart && pDate <= fyEnd;
+            });
+            if (hasPaymentInYear) return true;
+          }
+
+          // 2. Fallback to paidUntil date logic
+          if (memberInfo?.paidUntil) {
+            const paidUntilDate = new Date(memberInfo.paidUntil);
+            const paidYear = paidUntilDate.getUTCFullYear();
+            const paidMonth = paidUntilDate.getUTCMonth(); // 0-11
+            
+            const targetYear = startYear + 1;
+            if (paidYear > targetYear) return true;
+            if (paidYear === targetYear && paidMonth >= 2) return true;
+          }
+
           return false;
         };
 
@@ -507,10 +531,10 @@ const MemberPortal = () => {
                     Current Year ({currentFY})
                   </div>
                   <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                    ₹{currentYearCost !== undefined 
-                      ? currentYearCost.toLocaleString() 
-                      : ((memberInfo?.tenant?.maintenanceAmount || 0) * 12).toLocaleString()
-                    }/yr
+                    {currentYearCost !== undefined 
+                      ? `₹${currentYearCost.toLocaleString()}/yr` 
+                      : 'Fee not set'
+                    }
                   </div>
                 </div>
               </div>
@@ -536,7 +560,7 @@ const MemberPortal = () => {
                             {isCurrent && <span style={{ marginLeft: '0.5rem', fontSize: '0.7rem', color: 'var(--primary)', backgroundColor: 'rgba(37, 99, 235, 0.1)', padding: '0.1rem 0.4rem', borderRadius: '0.25rem', fontWeight: 600 }}>Current</span>}
                           </td>
                           <td style={{ padding: '0.75rem', fontSize: '0.875rem', fontWeight: 600 }}>
-                            ₹{c.amount.toLocaleString()}/year
+                            {c.amount !== null ? `₹${c.amount.toLocaleString()}/year` : 'Fee not set'}
                           </td>
                           <td style={{ padding: '0.75rem', fontSize: '0.825rem', textAlign: 'right' }}>
                             {paid ? (
