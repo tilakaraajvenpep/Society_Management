@@ -486,14 +486,6 @@ const MemberPortal = () => {
             });
             if (hasMatchingLabel) return true;
 
-            // Check if any payment's paymentDate falls within this financial year (April 1 of startYear to March 31 of startYear + 1)
-            const fyStart = new Date(`${startYear}-04-01T00:00:00Z`);
-            const fyEnd = new Date(`${startYear + 1}-03-31T23:59:59Z`);
-            const hasPaymentInYear = memberInfo.payments.some((p: any) => {
-              const pDate = new Date(p.paymentDate);
-              return pDate >= fyStart && pDate <= fyEnd;
-            });
-            if (hasPaymentInYear) return true;
           }
 
           // 2. Fallback to paidUntil date logic
