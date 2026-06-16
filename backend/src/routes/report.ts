@@ -37,11 +37,9 @@ router.get("/summary", authorize(["TENANT_ADMIN"]), async (req: any, res) => {
     
     for (const m of members) {
       let additionalDues = 0;
-      if (m.paidUntil) {
-        const d = new Date(m.paidUntil);
-        const paidUntilStr = `${d.getUTCFullYear()}-${(d.getUTCMonth() + 1).toString().padStart(2, '0')}-${d.getUTCDate().toString().padStart(2, '0')}`;
-        additionalDues = await calculateDues(prisma, tenantId, paidUntilStr, m.defaultTenure);
-      }
+      const d = m.paidUntil ? new Date(m.paidUntil) : null;
+      const paidUntilStr = d ? `${d.getUTCFullYear()}-${(d.getUTCMonth() + 1).toString().padStart(2, '0')}-${d.getUTCDate().toString().padStart(2, '0')}` : null;
+      additionalDues = await calculateDues(prisma, tenantId, paidUntilStr, m.defaultTenure, m.createdAt);
       const totalM = (m.outstandingDues || 0) + additionalDues;
       if (totalM > 0) {
         totalOutstanding += totalM;

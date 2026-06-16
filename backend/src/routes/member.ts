@@ -35,11 +35,9 @@ router.get("/profile", authorize(["MEMBER"]), async (req: any, res) => {
     }
     
     let additionalDues = 0;
-    if (member.paidUntil) {
-      const d = new Date(member.paidUntil);
-      const paidUntilStr = `${d.getUTCFullYear()}-${(d.getUTCMonth() + 1).toString().padStart(2, '0')}-${d.getUTCDate().toString().padStart(2, '0')}`;
-      additionalDues = await calculateDues(prisma, member.tenantId, paidUntilStr, member.defaultTenure);
-    }
+    const d = member.paidUntil ? new Date(member.paidUntil) : null;
+    const paidUntilStr = d ? `${d.getUTCFullYear()}-${(d.getUTCMonth() + 1).toString().padStart(2, '0')}-${d.getUTCDate().toString().padStart(2, '0')}` : null;
+    additionalDues = await calculateDues(prisma, member.tenantId, paidUntilStr, member.defaultTenure, member.createdAt);
     
     res.json({
       ...member,
@@ -61,13 +59,25 @@ export function getFinancialYearForDate(date: Date): string {
 export async function calculateDues(
   tx: any,
   tenantId: string,
-  paidUntilStr: string,
-  defaultTenure: string
+  paidUntilStr: string | null | undefined,
+  defaultTenure: string,
+  registrationDate?: Date | string
 ): Promise<number> {
-  if (!paidUntilStr) return 0;
-  
-  const [year, month, day] = paidUntilStr.split('-').map(Number);
-  const activeDate = new Date(Date.UTC(year, month - 1, day));
+  const regDate = registrationDate ? new Date(registrationDate) : new Date();
+  const regDateUTC = new Date(Date.UTC(regDate.getUTCFullYear(), regDate.getUTCMonth(), regDate.getUTCDate()));
+
+  let activeDate: Date;
+
+  if (paidUntilStr) {
+    const [year, month, day] = paidUntilStr.split('-').map(Number);
+    activeDate = new Date(Date.UTC(year, month - 1, day));
+  } else {
+    activeDate = regDateUTC;
+  }
+
+  if (activeDate < regDateUTC) {
+    activeDate = regDateUTC;
+  }
   
   const today = new Date();
   const todayUTC = new Date(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()));
@@ -169,11 +179,9 @@ router.get("/", authorize(["TENANT_ADMIN"]), async (req: any, res) => {
   const enrichedMembers = await Promise.all(
     members.map(async (m) => {
       let additionalDues = 0;
-      if (m.paidUntil) {
-        const d = new Date(m.paidUntil);
-        const paidUntilStr = `${d.getUTCFullYear()}-${(d.getUTCMonth() + 1).toString().padStart(2, '0')}-${d.getUTCDate().toString().padStart(2, '0')}`;
-        additionalDues = await calculateDues(prisma, req.user.tenantId, paidUntilStr, m.defaultTenure);
-      }
+      const d = m.paidUntil ? new Date(m.paidUntil) : null;
+      const paidUntilStr = d ? `${d.getUTCFullYear()}-${(d.getUTCMonth() + 1).toString().padStart(2, '0')}-${d.getUTCDate().toString().padStart(2, '0')}` : null;
+      additionalDues = await calculateDues(prisma, req.user.tenantId, paidUntilStr, m.defaultTenure, m.createdAt);
       return {
         ...m,
         totalDues: (m.outstandingDues || 0) + additionalDues
@@ -232,7 +240,7 @@ router.post("/", authorize(["TENANT_ADMIN"]), async (req: any, res) => {
         });
         userId = user.id;
       }
-      const additionalDues = await calculateDues(tx, req.user.tenantId, paidUntil, defaultTenure);
+      const additionalDues = await calculateDues(tx, req.user.tenantId, paidUntil, defaultTenure, createdAt ? new Date(createdAt) : new Date());
       const inputDues = outstandingDues ? parseFloat(outstandingDues.toString()) : 0;
       const totalOutstandingDues = inputDues + additionalDues;
 

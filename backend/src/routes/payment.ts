@@ -130,11 +130,9 @@ router.get("/upcoming", authorize(["TENANT_ADMIN"]), async (req: any, res) => {
     const enrichedMembers = await Promise.all(
       upcomingMembers.map(async (m) => {
         let additionalDues = 0;
-        if (m.paidUntil) {
-          const d = new Date(m.paidUntil);
-          const paidUntilStr = `${d.getUTCFullYear()}-${(d.getUTCMonth() + 1).toString().padStart(2, '0')}-${d.getUTCDate().toString().padStart(2, '0')}`;
-          additionalDues = await calculateDues(prisma, req.user.tenantId, paidUntilStr, m.defaultTenure);
-        }
+        const d = m.paidUntil ? new Date(m.paidUntil) : null;
+        const paidUntilStr = d ? `${d.getUTCFullYear()}-${(d.getUTCMonth() + 1).toString().padStart(2, '0')}-${d.getUTCDate().toString().padStart(2, '0')}` : null;
+        additionalDues = await calculateDues(prisma, req.user.tenantId, paidUntilStr, m.defaultTenure, m.createdAt);
         return {
           ...m,
           totalDues: (m.outstandingDues || 0) + additionalDues
