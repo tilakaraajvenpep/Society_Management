@@ -782,7 +782,7 @@ const Helpdesk = ({ token }: { token: string | null }) => {
                   <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>{new Date(t.createdAt).toLocaleDateString()}</span>
                 </div>
                 <div style={{ fontWeight: 600, fontSize: '0.925rem', marginBottom: '0.25rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.subject}</div>
-                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.75rem' }}>Flat {t.member?.flatNo} • {t.member?.name}</div>
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.75rem' }}>House / Flat {t.member?.flatNo} • {t.member?.name}</div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   {getStatusBadge(t.status)}
                   <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
@@ -804,7 +804,7 @@ const Helpdesk = ({ token }: { token: string | null }) => {
               <div>
                 <h3 style={{ fontSize: '1.25rem', marginBottom: '0.25rem' }}>{selectedTicket.subject}</h3>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
-                  <span>Raised by: <strong>{selectedTicket.member?.name} (Flat {selectedTicket.member?.flatNo})</strong></span>
+                  <span>Raised by: <strong>{selectedTicket.member?.name} (House / Flat {selectedTicket.member?.flatNo})</strong></span>
                   <span>•</span>
                   <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}><Clock size={14} /> {new Date(selectedTicket.createdAt).toLocaleString()}</span>
                 </div>
@@ -1246,13 +1246,13 @@ const TenantAdminDashboard = () => {
   };
 
   const handleVacantMember = async (id: string, name: string, flatNo: string) => {
-    if (!window.confirm(`Are you sure you want to mark Flat ${flatNo} (${name}) as VACANT?\nThis will revoke their login access and pause future dues. You can add a new occupant to this flat later.`)) return;
+    if (!window.confirm(`Are you sure you want to mark House / Flat ${flatNo} (${name}) as VACANT?\nThis will revoke their login access and pause future dues. You can add a new occupant to this house / flat later.`)) return;
     try {
       await axios.patch(`/members/${id}/vacant`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
       fetchData();
-      alert('Flat marked as vacant successfully.');
+      alert('House / Flat marked as vacant successfully.');
     } catch (err: any) {
       alert(err.response?.data?.message || 'Error marking vacant');
     }
@@ -1363,13 +1363,13 @@ const TenantAdminDashboard = () => {
   const myBalance = user?.id ? (cashBalances.find((b: any) => b.userId === user.id)?.balance || 0) : 0;
 
   const exportMembers = () => {
-    const headers = ['Name', 'Flat No', 'Email', 'Mobile', 'Status', 'Outstanding Dues'];
+    const headers = ['Name', 'House / Flat No', 'Email', 'Mobile', 'Status', 'Outstanding Dues'];
     const rows = members.map((m: any) => [m.name, m.flatNo, m.email, m.mobile, m.status, m.outstandingDues]);
     exportTableToCSV(`members_${new Date().toISOString().split('T')[0]}.csv`, headers, rows);
   };
 
   const exportPayments = () => {
-    const headers = ['Receipt No', 'Member Name', 'Flat No', 'Amount', 'Mode', 'Date', 'Financial Year', 'Period', 'Status'];
+    const headers = ['Receipt No', 'Member Name', 'House / Flat No', 'Amount', 'Mode', 'Date', 'Financial Year', 'Period', 'Status'];
     const rows = payments.map((p: any) => {
       const d = new Date(p.paymentDate);
       const fyStart = d.getMonth() >= 3 ? d.getFullYear() : d.getFullYear() - 1;
@@ -1532,7 +1532,7 @@ const TenantAdminDashboard = () => {
                       <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.65rem 0.875rem', backgroundColor: 'var(--bg-secondary)', borderRadius: '0.5rem' }}>
                         <div>
                           <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>{p.memberName}</span>
-                          <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginLeft: '0.5rem' }}>Flat {p.flatNo}</span>
+                          <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginLeft: '0.5rem' }}>House / Flat {p.flatNo}</span>
                         </div>
                         <div style={{ textAlign: 'right' }}>
                           <div style={{ fontWeight: 700, color: '#10b981' }}>₹{Number(p.amount).toLocaleString()}</div>
@@ -1619,7 +1619,7 @@ const TenantAdminDashboard = () => {
                 <thead>
                   <tr>
                     <th>Name</th>
-                    <th>Flat No</th>
+                    <th>House / Flat No</th>
                     <th>Contact Info</th>
                     <th>Dues</th>
                     <th>Status</th>
@@ -1659,7 +1659,7 @@ const TenantAdminDashboard = () => {
                             <Edit size={16} />
                           </button>
                           {m.status !== 'VACANT' && (
-                            <button className="btn btn-secondary" style={{ padding: '0.4rem', borderRadius: '0.5rem', color: 'var(--error)' }} onClick={() => handleVacantMember(m.id, m.name, m.flatNo)} title="Mark Flat as Vacant">
+                            <button className="btn btn-secondary" style={{ padding: '0.4rem', borderRadius: '0.5rem', color: 'var(--error)' }} onClick={() => handleVacantMember(m.id, m.name, m.flatNo)} title="Mark House / Flat as Vacant">
                               <LogOut size={16} />
                             </button>
                           )}
@@ -2192,7 +2192,7 @@ const TenantAdminDashboard = () => {
                     let details = log.details || '';
                     members.forEach((m: any) => {
                       if (details.includes(m.id)) {
-                        details = details.replace(m.id, `${m.name} (Flat ${m.flatNo})`);
+                        details = details.replace(m.id, `${m.name} (House / Flat ${m.flatNo})`);
                       }
                     });
                     const ts = log.timestamp || log.createdAt;
@@ -2466,7 +2466,7 @@ const TenantAdminDashboard = () => {
               <table className="table">
                 <thead>
                   <tr>
-                    <th>FLAT NO</th>
+                    <th>HOUSE / FLAT NO</th>
                     <th>MEMBER</th>
                     <th>PAYMENT DONE DATE</th>
                     <th>OUTSTANDING DUES</th>
@@ -2672,7 +2672,7 @@ const TenantAdminDashboard = () => {
                       <input type="text" required value={newMember.name} onChange={(e) => setNewMember({ ...newMember, name: e.target.value })} />
                     </div>
                     <div>
-                      <label style={{ fontSize: '0.875rem', fontWeight: 500, marginBottom: '0.4rem', display: 'block' }}>Flat / Unit No</label>
+                      <label style={{ fontSize: '0.875rem', fontWeight: 500, marginBottom: '0.4rem', display: 'block' }}>House / Flat No</label>
                       <input type="text" required value={newMember.flatNo} onChange={(e) => setNewMember({ ...newMember, flatNo: e.target.value })} />
                     </div>
                     <div>
@@ -2815,7 +2815,7 @@ const TenantAdminDashboard = () => {
                       <h2 style={{ fontSize: '1.25rem', marginBottom: '0.25rem' }}>Member Info & History</h2>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
                         <span style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
-                          {selectedMember.name} &mdash; Flat {selectedMember.flatNo}
+                          {selectedMember.name} &mdash; House / Flat {selectedMember.flatNo}
                         </span>
                         {selectedMember.idProofUrl && (
                           <button 
@@ -2942,7 +2942,7 @@ const TenantAdminDashboard = () => {
                   <div style={{ marginBottom: '1.5rem' }}>
                     <div style={{ fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>Received From</div>
                     <div style={{ fontSize: '1.125rem', fontWeight: 600 }}>{selectedPayment.member?.name}</div>
-                    <div style={{ color: '#475569' }}>Flat No: {selectedPayment.member?.flatNo}</div>
+                    <div style={{ color: '#475569' }}>House / Flat No: {selectedPayment.member?.flatNo}</div>
                   </div>
 
                   <div style={{ backgroundColor: '#f8fafc', padding: '1.5rem', borderRadius: '0.75rem', marginBottom: '2rem' }}>
@@ -3018,7 +3018,7 @@ const TenantAdminDashboard = () => {
                       <input type="text" required value={editingMember.name} onChange={(e) => setEditingMember({ ...editingMember, name: e.target.value })} />
                     </div>
                     <div>
-                      <label style={{ fontSize: '0.875rem', fontWeight: 500, marginBottom: '0.4rem', display: 'block' }}>Flat / Unit No</label>
+                      <label style={{ fontSize: '0.875rem', fontWeight: 500, marginBottom: '0.4rem', display: 'block' }}>House / Flat No</label>
                       <input type="text" required value={editingMember.flatNo} onChange={(e) => setEditingMember({ ...editingMember, flatNo: e.target.value })} />
                     </div>
                      <div>

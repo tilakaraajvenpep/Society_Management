@@ -357,7 +357,7 @@ const MemberPayments = ({ memberInfo, user }: { memberInfo: any, user: any }) =>
               <div style={{ marginBottom: '1.5rem' }}>
                 <div style={{ fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>Received From</div>
                 <div style={{ fontSize: '1.125rem', fontWeight: 600 }}>{selectedPayment.member?.name}</div>
-                <div style={{ color: '#475569' }}>Flat No: {selectedPayment.member?.flatNo}</div>
+                <div style={{ color: '#475569' }}>House / Flat No: {selectedPayment.member?.flatNo}</div>
               </div>
 
               <div style={{ backgroundColor: '#f8fafc', padding: '1.5rem', borderRadius: '0.75rem', marginBottom: '2rem' }}>
@@ -713,7 +713,7 @@ const MemberPortal = () => {
       <div className="main-content">
         <header style={{ marginBottom: '2.5rem' }}>
           <h1 style={{ fontSize: '1.5rem', fontWeight: 700 }}>Resident Portal</h1>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>{user?.tenantName} • Flat {memberInfo?.flatNo}</p>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>{user?.tenantName} • House / Flat {memberInfo?.flatNo}</p>
         </header>
 
         {renderContent()}
