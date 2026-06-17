@@ -538,7 +538,7 @@ const MemberPortal = () => {
                   <div style={{ padding: '0.6rem', borderRadius: '0.5rem', backgroundColor: 'rgba(16, 185, 129, 0.1)', color: 'var(--success)' }}>
                     <User size={20} />
                   </div>
-                  <span style={{ fontWeight: 600, color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Flat Details</span>
+                  <span style={{ fontWeight: 600, color: 'var(--text-secondary)', fontSize: '0.875rem' }}>House / Flat Details</span>
                 </div>
                 <div style={{ fontSize: '1.25rem', fontWeight: 700 }}>
                   Unit {memberInfo?.flatNo || 'N/A'}
